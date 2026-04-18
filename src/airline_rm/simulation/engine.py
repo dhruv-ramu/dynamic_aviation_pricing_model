@@ -1,49 +1,23 @@
-"""Minimal single-flight simulation engine (Phase 1 placeholder demand)."""
+"""Single-flight simulation engine with modular stochastic demand."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Protocol
 
 import numpy as np
 
-from airline_rm.types import SimulationConfig
-from airline_rm.constants import PLACEHOLDER_BOOKINGS_PER_DAY
+from airline_rm.demand.arrivals import DailyArrivalModel
+from airline_rm.demand.booking_curve import BookingCurveModel
+from airline_rm.demand.conversion import BookingConverter
+from airline_rm.demand.segment_mix import SegmentMixModel
+from airline_rm.demand.willingness_to_pay import WTPModel
 from airline_rm.entities.booking_request import BookingRequest
 from airline_rm.entities.flight import Flight
 from airline_rm.entities.passenger_segment import PassengerSegment
 from airline_rm.entities.route import Route
 from airline_rm.entities.simulation_state import FlightSimulationResult, SimulationState
 from airline_rm.pricing.pricing_policy_base import PricingPolicy
-
-
-class DailyDemandModel(Protocol):
-    """Protocol for future stochastic demand modules."""
-
-    def booking_attempts_today(
-        self,
-        days_until_departure: int,
-        state: SimulationState,
-        rng: np.random.Generator,
-    ) -> int:
-        """Return how many booking attempts occur today."""
-
-
-@dataclass(slots=True)
-class FixedDailyDemand:
-    """Deterministic placeholder demand (constant attempts per day)."""
-
-    attempts_per_day: int = PLACEHOLDER_BOOKINGS_PER_DAY
-
-    def booking_attempts_today(
-        self,
-        days_until_departure: int,
-        state: SimulationState,
-        rng: np.random.Generator,
-    ) -> int:
-        _ = days_until_departure, state, rng
-        return self.attempts_per_day
+from airline_rm.types import SimulationConfig
 
 
 def _build_flight(config: SimulationConfig) -> Flight:
@@ -72,29 +46,40 @@ def run_single_flight_simulation(
     config: SimulationConfig,
     policy: PricingPolicy,
     rng: np.random.Generator,
-    demand_model: DailyDemandModel | None = None,
 ) -> FlightSimulationResult:
-    """Simulate bookings day-by-day until the horizon ends."""
+    """Simulate bookings day-by-day using the demand subsystem (curve, arrivals, WTP, conversion)."""
 
     flight = _build_flight(config)
     state = SimulationState(flight=flight)
-    demand = demand_model or FixedDailyDemand()
+
+    booking_curve = BookingCurveModel.from_simulation_config(config)
+    arrivals = DailyArrivalModel.from_simulation_config(config, booking_curve)
+    segment_mix = SegmentMixModel.from_simulation_config(config)
+    wtp_model = WTPModel.from_simulation_config(config)
+    converter = BookingConverter()
 
     for day in range(1, config.booking_horizon_days + 1):
         state.day_index = day
         days_until_departure = config.booking_horizon_days - day + 1
         fare = policy.quote_fare(days_until_departure, state)
-        attempts = demand.booking_attempts_today(days_until_departure, state, rng)
 
-        for _ in range(attempts):
+        day_index_zero_based = day - 1
+        n_arrivals = arrivals.sample_arrivals_for_day(day_index_zero_based, rng)
+
+        for _ in range(n_arrivals):
+            p_business = segment_mix.business_share(days_until_departure)
+            segment = PassengerSegment.BUSINESS if rng.random() < p_business else PassengerSegment.LEISURE
+
+            wtp = wtp_model.sample_wtp(segment, rng)
+
+            if not converter.will_book(fare, wtp):
+                state.rejected_due_to_price += 1
+                continue
+
             if state.seats_remaining <= 0:
-                break
+                state.rejected_due_to_capacity += 1
+                continue
 
-            segment = (
-                PassengerSegment.BUSINESS
-                if rng.random() < 0.5
-                else PassengerSegment.LEISURE
-            )
             request = BookingRequest(
                 days_until_departure=days_until_departure,
                 segment=segment,
@@ -106,6 +91,14 @@ def run_single_flight_simulation(
             state.total_ancillary_revenue += float(config.ancillary_mean)
             state.accepted_bookings.append(request)
 
+            if segment is PassengerSegment.BUSINESS:
+                state.bookings_business += 1
+            else:
+                state.bookings_leisure += 1
+
+            if state.seats_sold >= state.flight.capacity and state.sellout_day is None:
+                state.sellout_day = day
+
     total_cost = float(config.fixed_flight_cost) + _variable_operating_cost(config, state.seats_sold)
 
     return FlightSimulationResult(
@@ -115,4 +108,9 @@ def run_single_flight_simulation(
         total_ticket_revenue=state.total_ticket_revenue,
         total_ancillary_revenue=state.total_ancillary_revenue,
         total_cost=total_cost,
+        bookings_business=state.bookings_business,
+        bookings_leisure=state.bookings_leisure,
+        rejected_due_to_price=state.rejected_due_to_price,
+        rejected_due_to_capacity=state.rejected_due_to_capacity,
+        sellout_day=state.sellout_day,
     )

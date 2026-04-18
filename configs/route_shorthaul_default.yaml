@@ -8,16 +8,42 @@ route_distance_miles: 450
 booking_horizon_days: 60
 capacity: 180
 
-# Reference fare and ordered buckets (high to low is conventional; engine uses first bucket for static policy).
+# Reference fare and ordered buckets (high to low is conventional; static policy uses first bucket).
 base_fare: 140.0
 fare_buckets: [220.0, 189.0, 159.0, 139.0, 119.0]
 
-# Demand / segment placeholders for future phases (used by config validation only today).
+# Legacy elasticity placeholders (reserved for future pricing/demand calibration).
 business_share_late: 0.35
 leisure_elasticity: 1.4
 business_elasticity: 0.6
 
-# Operations / revenue placeholders (no-show logic not simulated in Phase 1).
+# --- Phase 2: stochastic demand (booking curve, arrivals, segment mix, WTP, conversion) ---
+# Total expected shopper arrivals across the horizon (not equal to seats sold; conversion + capacity bind).
+expected_total_demand: 210.0
+demand_multiplier: 1.0
+
+# booking_curve: logistic intensity in days-until-departure space (see booking_curve.py).
+booking_curve_type: "logistic"
+booking_curve_midpoint: 18.0
+booking_curve_steepness: 0.45
+
+# Segment mix: business share rises as departure approaches (logistic in days-until-departure).
+early_business_share: 0.14
+late_business_share: 0.58
+segment_transition_midpoint_days: 22.0
+segment_transition_steepness: 0.35
+
+# WTP: means and sigmas are in USD; sigma is interpreted as a standard deviation in dollar space
+# (converted internally to lognormal parameters).
+leisure_wtp_mean: 165.0
+leisure_wtp_sigma: 55.0
+business_wtp_mean: 340.0
+business_wtp_sigma: 95.0
+
+# If false, daily arrivals use round(expected lambda) instead of Poisson draws (tests / debugging).
+demand_stochastic: true
+
+# Operations / revenue placeholders (no-show logic not simulated yet).
 no_show_mean: 0.10
 overbooking_limit_pct: 0.03
 

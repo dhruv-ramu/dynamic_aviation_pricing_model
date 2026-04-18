@@ -1,4 +1,4 @@
-"""Tests for the simulation engine skeleton."""
+"""Tests for the simulation engine with stochastic demand."""
 
 from __future__ import annotations
 
@@ -13,13 +13,22 @@ from airline_rm.simulation.random_state import make_generator
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_engine_returns_typed_result() -> None:
+def test_engine_returns_typed_result_within_capacity() -> None:
     cfg = load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml")
     rng = make_generator(cfg)
     policy = StaticPricingPolicy(cfg)
     result = run_single_flight_simulation(cfg, policy, rng)
 
     assert isinstance(result, FlightSimulationResult)
-    assert result.seats_sold <= cfg.capacity
-    assert result.seats_sold == cfg.booking_horizon_days * 2
+    assert 0 <= result.seats_sold <= cfg.capacity
+    assert result.bookings_business + result.bookings_leisure == result.seats_sold
     assert result.total_ticket_revenue == result.seats_sold * cfg.fare_buckets[0]
+
+
+def test_engine_is_reproducible_for_fixed_seed() -> None:
+    cfg = load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml")
+    r1 = run_single_flight_simulation(cfg, StaticPricingPolicy(cfg), make_generator(cfg))
+    r2 = run_single_flight_simulation(cfg, StaticPricingPolicy(cfg), make_generator(cfg))
+    assert r1.seats_sold == r2.seats_sold
+    assert r1.rejected_due_to_price == r2.rejected_due_to_price
+    assert r1.rejected_due_to_capacity == r2.rejected_due_to_capacity

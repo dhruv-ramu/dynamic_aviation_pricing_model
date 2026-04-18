@@ -16,6 +16,9 @@ class SimulationMetrics:
     total_revenue: float
     total_cost: float
     profit: float
+    bookings_business: int
+    bookings_leisure: int
+    sellout_day: int | None
 
 
 def compute_metrics(result: FlightSimulationResult) -> SimulationMetrics:
@@ -34,4 +37,7 @@ def compute_metrics(result: FlightSimulationResult) -> SimulationMetrics:
         total_revenue=total_revenue,
         total_cost=result.total_cost,
         profit=total_revenue - result.total_cost,
+        bookings_business=result.bookings_business,
+        bookings_leisure=result.bookings_leisure,
+        sellout_day=result.sellout_day,
     )

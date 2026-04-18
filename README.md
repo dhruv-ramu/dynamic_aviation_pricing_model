@@ -5,19 +5,20 @@ Modular, source-backed **simulation engine** for short-haul U.S. domestic airlin
 ## What this is
 
 - A typed Python package (`airline_rm`) with a clear pipeline: **config → environment entities → pricing policy → simulation → metrics**.
-- Phase 1 provides YAML-driven configuration, core datamodels, a **minimal static fare policy**, a **placeholder demand loop**, transparent **KPI metrics**, and a **CLI** to run one experiment end-to-end.
+- Phase 1 provides YAML-driven configuration, core datamodels, and a **minimal static fare policy**.
+- **Phase 2 demand** adds a modular stochastic demand path: **logistic booking curve** (time-varying arrival intensity), **Poisson daily arrivals**, **segment mix** (leisure-early / business-late logistic), **lognormal willingness-to-pay** (USD mean/std), and **threshold conversion** vs the quoted fare—wired through the simulation engine with transparent **KPI metrics** and a **CLI** entrypoint.
 
 ## What this is not (yet)
 
 - Not a dataset project, notebook-first workflow, or RL training stack.
 - No live fare scraping, databases, Streamlit frontends, or Docker orchestration.
-- No full stochastic demand system, booking curves, willingness-to-pay, no-show draws, overbooking optimization, or competitor reaction models (those are explicitly deferred).
+- No-show realization, overbooking optimization, denied boarding, competitor reaction, dynamic/rule-based pricing, or policy comparison runners are **not** implemented yet.
 
 ## Repository layout
 
 - `configs/` — YAML parameters (`base_config.yaml` extends `route_shorthaul_default.yaml`).
 - `src/airline_rm/` — package code (`entities`, `demand`, `pricing`, `revenue`, `cost`, `simulation`, `evaluation`, `utils`, `cli`).
-- `tests/` — `pytest` coverage for config, entities, engine, metrics.
+- `tests/` — `pytest` coverage for config, entities, demand modules, engine, metrics.
 - `notebooks/` — scratch space for validation/debug (not part of the runtime library).
 - `data/`, `outputs/` — reserved for future artifacts (kept empty with `.gitkeep` markers).
 
@@ -40,7 +41,7 @@ Sources live under `src/airline_rm/` (src layout). Install with `pip install -e 
 
 ## Roadmap (later phases)
 
-- Replace placeholder demand with calibrated booking arrivals, segment mix, and conversion.
+- Calibrate demand parameters to data (optional) and extend conversion (e.g. logit) or ancillary heterogeneity.
 - Add stochastic no-shows, overbooking limits, denied boarding costs, and richer ancillary models.
 - Implement dynamic and competitor-aware policies plus Monte Carlo runners and policy comparison tables.
 

@@ -20,6 +20,9 @@ def test_metrics_internal_consistency() -> None:
         total_ticket_revenue=5000.0,
         total_ancillary_revenue=1000.0,
         total_cost=4000.0,
+        bookings_business=20,
+        bookings_leisure=30,
+        sellout_day=9,
     )
     m = compute_metrics(result)
 
@@ -27,3 +30,6 @@ def test_metrics_internal_consistency() -> None:
     assert m.profit == m.total_revenue - m.total_cost
     assert m.load_factor == 0.5
     assert m.avg_fare == 100.0
+    assert m.bookings_business == 20
+    assert m.bookings_leisure == 30
+    assert m.sellout_day == 9

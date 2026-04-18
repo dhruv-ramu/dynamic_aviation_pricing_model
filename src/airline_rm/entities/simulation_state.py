@@ -18,6 +18,11 @@ class SimulationState:
     total_ticket_revenue: float = 0.0
     total_ancillary_revenue: float = 0.0
     accepted_bookings: list[BookingRequest] = field(default_factory=list)
+    bookings_business: int = 0
+    bookings_leisure: int = 0
+    rejected_due_to_price: int = 0
+    rejected_due_to_capacity: int = 0
+    sellout_day: int | None = None
 
     @property
     def seats_remaining(self) -> int:
@@ -34,3 +39,8 @@ class FlightSimulationResult:
     total_ticket_revenue: float
     total_ancillary_revenue: float
     total_cost: float
+    bookings_business: int = 0
+    bookings_leisure: int = 0
+    rejected_due_to_price: int = 0
+    rejected_due_to_capacity: int = 0
+    sellout_day: int | None = None

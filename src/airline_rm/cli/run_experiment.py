@@ -44,6 +44,8 @@ def main() -> None:
     print(f"  Avg fare: ${metrics.avg_fare:,.2f}")
     print(f"  Total revenue: ${metrics.total_revenue:,.2f}")
     print(f"  Profit: ${metrics.profit:,.2f}")
+    print(f"  Bookings (biz / leisure): {metrics.bookings_business} / {metrics.bookings_leisure}")
+    print(f"  Sellout day (1-based horizon index): {metrics.sellout_day}")
 
 
 if __name__ == "__main__":
