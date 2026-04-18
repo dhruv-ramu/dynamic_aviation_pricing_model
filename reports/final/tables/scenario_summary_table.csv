@@ -1,0 +1,12 @@
+scenario,likely_regime_type,winner,key_takeaway_short,bump_risk_dynamic,mean_denied_dynamic,mean_book_rate_dynamic,dynamic_vs_rule_profit_gap
+baseline,baseline,rule_based,Winner: rule_based.,0.0,0.0,0.8307027027027027,-929.2000000000007
+business_heavy,business-heavy mix,rule_based,Winner: rule_based.,0.0,0.0,0.9067567567567569,-422.6800000000003
+high_no_show,no-show-heavy,rule_based,Winner: rule_based.,0.0,0.0,0.8307027027027027,-927.9400000000023
+higher_overbooking,higher overbooking cap,rule_based,Winner: rule_based.,0.0,0.0,0.7840816326530612,-929.2000000000007
+leisure_heavy,leisure-heavy mix,rule_based,Winner: rule_based.,0.0,0.0,0.8134054054054054,-855.6100000000006
+low_no_show,no-show-light,rule_based,Winner: rule_based.,0.0,0.0,0.8307027027027027,-914.710000000001
+overbook_bump_stress,bump-stress,dynamic,Winner: dynamic. Material bump risk under dynamic.,0.07,0.29,0.8264851485148514,9838.408268408957
+strong_competitor_pressure,competitor-heavy,rule_based,Winner: rule_based.,0.0,0.0,0.8434594594594594,-778.0299999999988
+strong_demand,strong demand,dynamic,Winner: dynamic.,0.0,0.0,0.8986486486486488,1346.7999999999993
+very_strong_late_demand,late-demand-heavy,dynamic,Winner: dynamic.,0.0,0.0,0.9132972972972974,608.25
+weak_demand,weak demand,rule_based,Winner: rule_based.,0.0,0.0,0.6468648648648648,-763.9200000000001

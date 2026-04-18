@@ -1,0 +1,12 @@
+scenario,expected_total_demand,demand_multiplier,no_show_mean,overbooking_limit_pct,early_business_share,late_business_share,booking_curve_midpoint,booking_curve_steepness,leisure_wtp_mean,business_wtp_mean,competitor_mode,competitor_response_strength
+baseline,210.0,1.0,0.1,0.03,0.1,0.42,18.0,0.45,208.0,315.0,static,0.35
+weak_demand,168.0,0.93,0.1,0.03,0.1,0.42,18.0,0.45,208.0,315.0,static,0.35
+strong_demand,255.0,1.12,0.1,0.03,0.1,0.42,18.0,0.45,208.0,315.0,static,0.35
+very_strong_late_demand,238.0,1.1,0.1,0.03,0.1,0.5,11.0,0.56,208.0,315.0,static,0.35
+high_no_show,210.0,1.0,0.19,0.03,0.1,0.42,18.0,0.45,208.0,315.0,static,0.35
+low_no_show,210.0,1.0,0.04,0.03,0.1,0.42,18.0,0.45,208.0,315.0,static,0.35
+business_heavy,210.0,1.0,0.1,0.03,0.22,0.68,18.0,0.45,208.0,315.0,static,0.35
+leisure_heavy,210.0,1.0,0.1,0.03,0.06,0.38,18.0,0.45,208.0,315.0,static,0.35
+higher_overbooking,210.0,1.0,0.1,0.09,0.1,0.42,18.0,0.45,208.0,315.0,static,0.35
+overbook_bump_stress,268.0,1.14,0.045,0.125,0.1,0.42,14.0,0.5,208.0,315.0,static,0.35
+strong_competitor_pressure,210.0,1.0,0.1,0.03,0.1,0.42,18.0,0.45,208.0,315.0,reactive,0.55

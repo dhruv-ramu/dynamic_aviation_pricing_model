@@ -1,0 +1,13 @@
+metric_name,plain_english_definition,formula_or_description,interpretation_note
+mean_profit,Average accounting profit per Monte Carlo run.,"total_revenue - total_cost per run, then mean over runs.",Higher is better; includes denied-boarding and goodwill costs when applicable.
+mean_revenue,Average ticket plus ancillary revenue per run.,ticket_revenue + ancillary_revenue from compute_metrics.,Does not subtract operating or bump costs.
+mean_boarded_load_factor,Boarded passengers divided by physical cabin seats.,boarded_passengers / physical_capacity.,Can exceed 1.0 only if modeling artifact; here capped by simulation logic to cabin.
+mean_accepted_booking_load_factor,Accepted bookings divided by physical seats (not booking limit).,bookings_accepted / physical_capacity.,Values above 1 indicate selling past cabin capacity before no-shows.
+mean_booking_rate,Accepted bookings as a fraction of the booking limit.,bookings_accepted / booking_limit.,Near 1 means frequent sell-up against the authorization cap (overbooking pool).
+mean_avg_fare,Average realized ticket yield per accepted booking.,ticket_revenue / bookings_accepted.,"Mix of bucket choices, conversion, and capacity binding."
+mean_denied_boardings,Mean count of involuntarily denied boardings per run.,Departure-day outcome when show-ups exceed physical seats.,Drives compensation and goodwill costs in total_cost.
+bump_risk,Fraction of Monte Carlo runs with at least one denied boarding.,mean(1[denied_boardings > 0]).,Operational tail risk indicator.
+mean_no_show_count,Average realized no-shows per run.,Sampled from binomial model at departure.,Interacts with overbooking to set bump frequency.
+mean_ticket_revenue,Average ticket (fare) revenue per run.,"Sum of accepted booking fares per run, then mean.",Excludes ancillary; before denied-boarding refunds if modeled.
+mean_ancillary_revenue,Average ancillary revenue per boarded passenger per run.,Per `compute_metrics` ancillary model.,Typically scales with boarded count.
+mean_total_cost,Average total operating plus bump-related cost per run.,CASM-based operating cost plus denied-boarding compensation and goodwill.,Subtract from revenue to reconcile to profit where definitions align.
