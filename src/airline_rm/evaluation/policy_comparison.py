@@ -73,6 +73,8 @@ def compare_policies_monte_carlo(
                 "mean_profit": summary["mean_profit"],
                 "mean_revenue": mean_rev,
                 "mean_boarded_load_factor": summary["mean_boarded_load_factor"],
+                "mean_accepted_booking_load_factor": summary["mean_accepted_booking_load_factor"],
+                "mean_booking_rate": summary["mean_booking_rate"],
                 "mean_avg_fare": summary["mean_avg_fare"],
                 "mean_denied_boardings": summary["mean_denied_boardings"],
                 "bump_risk": summary["bump_risk"],

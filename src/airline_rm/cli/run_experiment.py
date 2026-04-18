@@ -12,6 +12,16 @@ from airline_rm.config import load_simulation_config
 from airline_rm.evaluation.diagnostics import summarize_accepted_segment_mix
 from airline_rm.evaluation.metrics import compute_metrics
 from airline_rm.evaluation.policy_comparison import compare_default_policies, compare_policies_monte_carlo
+from airline_rm.evaluation.report_plots import write_scenario_figures
+from airline_rm.evaluation.scenario_comparison import (
+    compare_policies_across_scenarios,
+    compact_winner_table,
+    format_compact_scenario_output,
+    format_scenario_report,
+    list_scenario_names_for_cli,
+    profit_delta_vs_static_wide,
+    scenario_winner_table,
+)
 from airline_rm.evaluation.sensitivity import sweep_parameter
 from airline_rm.pricing import build_pricing_policy
 from airline_rm.entities.simulation_state import FlightSimulationResult
@@ -47,7 +57,29 @@ def _parse_args() -> argparse.Namespace:
         "--scenario",
         type=str,
         default=None,
-        help="Named scenario preset (see simulation.scenario.SCENARIO_PRESETS).",
+        help=f"Named scenario preset. Available: {list_scenario_names_for_cli()}",
+    )
+    parser.add_argument(
+        "--compare-scenarios",
+        action="store_true",
+        help="Run policy comparison across multiple environment scenarios (use with --n-runs >= 2).",
+    )
+    parser.add_argument(
+        "--scenarios",
+        type=str,
+        default=None,
+        help="Comma-separated scenario names for --compare-scenarios (default: built-in narrative set).",
+    )
+    parser.add_argument(
+        "--report-dir",
+        type=Path,
+        default=None,
+        help="With --compare-scenarios: write CSV tables and PNG figures to this directory.",
+    )
+    parser.add_argument(
+        "--verbose-scenario-rows",
+        action="store_true",
+        help="With --compare-scenarios: print the full long policy×scenario metrics table.",
     )
     parser.add_argument(
         "--seed",
@@ -105,6 +137,49 @@ def _print_single_run_summary(
 def main() -> None:
     args = _parse_args()
     base = load_simulation_config(args.config)
+
+    if args.compare_scenarios:
+        if args.n_runs < 2:
+            raise SystemExit("--compare-scenarios requires --n-runs >= 2 (Monte Carlo per scenario).")
+        cfg_for_matrix = base
+        if args.seed is not None:
+            cfg_for_matrix = replace(cfg_for_matrix, rng_seed=int(args.seed))
+        scenario_filter = (
+            [s.strip() for s in str(args.scenarios).split(",") if s.strip()] if args.scenarios else None
+        )
+        long_df = compare_policies_across_scenarios(
+            cfg_for_matrix,
+            scenario_names=scenario_filter,
+            n_runs=args.n_runs,
+            base_seed=cfg_for_matrix.rng_seed,
+        )
+        winners = scenario_winner_table(long_df)
+        deltas = profit_delta_vs_static_wide(long_df)
+        compact = compact_winner_table(long_df, winners)
+        if args.verbose_scenario_rows:
+            print(long_df.to_string(index=False))
+            print()
+        print(format_compact_scenario_output(winners, compact, deltas))
+        print()
+        print(format_scenario_report(long_df))
+        if args.report_dir is not None:
+            rd = Path(args.report_dir)
+            rd.mkdir(parents=True, exist_ok=True)
+            long_df.to_csv(rd / "scenario_policy_summary.csv", index=False)
+            winners.to_csv(rd / "winners_detail.csv", index=False)
+            compact.to_csv(rd / "winner_compact.csv", index=False)
+            deltas.to_csv(rd / "profit_delta_vs_static.csv", index=False)
+            paths = write_scenario_figures(
+                long_df,
+                cfg_for_matrix,
+                rd,
+                trajectory_seed=int(cfg_for_matrix.rng_seed),
+            )
+            print(f"Wrote report artifacts to {rd.resolve()}:")
+            for p in paths:
+                print(f"  {p}")
+        return
+
     config = _apply_overrides(base, args)
 
     if args.sweep_param and args.sweep_values:

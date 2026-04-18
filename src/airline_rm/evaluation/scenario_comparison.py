@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import Any
 
-import numpy as np
 import pandas as pd
 
 from airline_rm.evaluation.policy_comparison import compare_policies_monte_carlo
@@ -23,6 +23,7 @@ DEFAULT_SCENARIO_ORDER: tuple[str, ...] = (
     "business_heavy",
     "leisure_heavy",
     "higher_overbooking",
+    "overbook_bump_stress",
     "strong_competitor_pressure",
 )
 
@@ -39,11 +40,10 @@ def scenario_names_ordered(filter_names: Sequence[str] | None = None) -> tuple[s
                 f"Available: {', '.join(sorted(all_names))}"
             )
         chosen = [n for n in DEFAULT_SCENARIO_ORDER if n in filter_names]
-        extras = [n for n in filter_names if n not in chosen]
-        return tuple(chosen + sorted(extras))
-    return tuple(n for n in DEFAULT_SCENARIO_ORDER if n in all_names) + tuple(
-        sorted(n for n in all_names if n not in DEFAULT_SCENARIO_ORDER)
-    )
+        extras = sorted(n for n in filter_names if n not in chosen)
+        return tuple(chosen + extras)
+    # Default matrix: narrative set only (extras such as ``no_overbooking`` require --scenarios).
+    return tuple(n for n in DEFAULT_SCENARIO_ORDER if n in all_names)
 
 
 def compare_policies_across_scenarios(
@@ -59,12 +59,7 @@ def compare_policies_across_scenarios(
     names = scenario_names_ordered(scenario_names)
     frames: list[pd.DataFrame] = []
     for name in names:
-        cfg = apply_scenario(base_config, name)
-        cfg = type(cfg)(**{**{f.name: getattr(cfg, f.name) for f in type(cfg).__dataclass_fields__.values()}, "rng_seed": seed})  # noqa: SLF001
-        # Preserve explicit seed on each scenario copy
-        from dataclasses import replace
-
-        cfg = replace(cfg, rng_seed=seed)
+        cfg = replace(apply_scenario(base_config, name), rng_seed=seed)
         df = compare_policies_monte_carlo(cfg, n_runs=n_runs, base_seed=seed)
         df.insert(0, "scenario", name)
         frames.append(df)
@@ -81,35 +76,92 @@ def scenario_winner_table(comparison_long: pd.DataFrame) -> pd.DataFrame:
         best = grp.loc[grp["mean_profit"].idxmax()]
         static_row = grp[grp["policy"] == "static"]
         static_p = float(static_row["mean_profit"].iloc[0]) if len(static_row) else float("nan")
-        row: dict[str, Any] = {
-            "scenario": scenario,
-            "winner": str(best["policy"]),
-            "mean_profit_static": static_p,
-            "mean_profit_rule_based": float(grp.loc[grp["policy"] == "rule_based", "mean_profit"].iloc[0]),
-            "mean_profit_dynamic": float(grp.loc[grp["policy"] == "dynamic", "mean_profit"].iloc[0]),
-        }
-        for pol in ("rule_based", "dynamic"):
-            p = float(grp.loc[grp["policy"] == pol, "mean_profit"].iloc[0])
-            row[f"{pol}_minus_static"] = p - static_p
-        rows.append(row)
+        rb = float(grp.loc[grp["policy"] == "rule_based", "mean_profit"].iloc[0])
+        dyn = float(grp.loc[grp["policy"] == "dynamic", "mean_profit"].iloc[0])
+        rows.append(
+            {
+                "scenario": scenario,
+                "winner": str(best["policy"]),
+                "mean_profit_static": static_p,
+                "mean_profit_rule_based": rb,
+                "mean_profit_dynamic": dyn,
+                "rule_based_minus_static": rb - static_p,
+                "dynamic_minus_static": dyn - static_p,
+            }
+        )
     return pd.DataFrame(rows)
 
 
-def format_scenario_report(long_df: pd.DataFrame, winners: pd.DataFrame | None = None) -> str:
-    """Human-readable block for CLI (wide profit pivot + optional winner summary)."""
+def profit_delta_vs_static_wide(long_df: pd.DataFrame) -> pd.DataFrame:
+    """Wide table: static profit plus rule/dynamic deltas vs static (per scenario)."""
 
     pivot = long_df.pivot(index="scenario", columns="policy", values="mean_profit")
-    pivot = pivot.reindex([r for r in DEFAULT_SCENARIO_ORDER if r in pivot.index]).dropna(how="all")
-    lines = ["--- mean_profit by scenario and policy ---", pivot.to_string(float_format=lambda x: f"{x:,.2f}")]
-    if winners is not None and not winners.empty:
-        lines.append("\n--- winner (max mean_profit) ---")
-        sub = winners[
+    static = pivot["static"].astype(float)
+    return pd.DataFrame(
+        {
+            "scenario": pivot.index.astype(str),
+            "profit_static": static.values,
+            "delta_rule_minus_static": (pivot["rule_based"] - static).values,
+            "delta_dynamic_minus_static": (pivot["dynamic"] - static).values,
+        }
+    )
+
+
+def compact_winner_table(long_df: pd.DataFrame, winners: pd.DataFrame) -> pd.DataFrame:
+    """Single compact row per scenario: winner, deltas, bump risk, booking pressure."""
+
+    bump_by = long_df.pivot(index="scenario", columns="policy", values="bump_risk")
+    br = long_df.pivot(index="scenario", columns="policy", values="mean_booking_rate")
+    denied = long_df.pivot(index="scenario", columns="policy", values="mean_denied_boardings")
+    mx_bump = long_df.groupby("scenario", sort=False)["bump_risk"].max().rename("bump_risk_max")
+    out = winners[
+        ["scenario", "winner", "rule_based_minus_static", "dynamic_minus_static"]
+    ].set_index("scenario")
+    out["bump_risk_dynamic"] = bump_by["dynamic"]
+    out["bump_risk_max"] = mx_bump
+    out["mean_book_rate_dynamic"] = br["dynamic"]
+    out["mean_denied_dynamic"] = denied["dynamic"]
+    return out.reset_index()
+
+
+def format_compact_scenario_output(
+    winners: pd.DataFrame,
+    compact: pd.DataFrame,
+    deltas: pd.DataFrame,
+) -> str:
+    """ASCII summary: winner table + profit deltas (no wide long replication table)."""
+
+    lines = [
+        "=== winners (mean_profit) ===",
+        winners.to_string(index=False),
+        "",
+        "=== profit vs static ===",
+        deltas.to_string(index=False, float_format=lambda x: f"{x:,.2f}"),
+        "",
+        "=== bump / booking pressure (dynamic policy) ===",
+        compact[
             [
                 "scenario",
-                "winner",
-                "rule_based_minus_static",
-                "dynamic_minus_static",
+                "bump_risk_dynamic",
+                "bump_risk_max",
+                "mean_book_rate_dynamic",
+                "mean_denied_dynamic",
             ]
-        ]
-        lines.append(sub.to_string(index=False))
+        ].to_string(index=False, float_format=lambda x: f"{x:.3f}"),
+    ]
     return "\n".join(lines)
+
+
+def format_scenario_report(long_df: pd.DataFrame, winners: pd.DataFrame | None = None) -> str:
+    """Wide mean_profit pivot (``winners`` kept for API compatibility; use compact tables separately)."""
+
+    _ = winners
+    pivot = long_df.pivot(index="scenario", columns="policy", values="mean_profit")
+    order = [s for s in DEFAULT_SCENARIO_ORDER if s in pivot.index]
+    order += [s for s in pivot.index if s not in order]
+    pivot = pivot.reindex(order)
+    return "--- mean_profit by scenario and policy ---\n" + pivot.to_string(float_format=lambda x: f"{x:,.2f}")
+
+
+def list_scenario_names_for_cli() -> str:
+    return ", ".join(list_scenarios())

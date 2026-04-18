@@ -1,0 +1,4 @@
+scenario,winner,mean_profit_static,mean_profit_rule_based,mean_profit_dynamic,rule_based_minus_static,dynamic_minus_static
+baseline,rule_based,14565.525,17709.575,16778.325,3144.050000000001,2212.800000000001
+higher_overbooking,rule_based,14565.525,17709.575,16778.325,3144.050000000001,2212.800000000001
+overbook_bump_stress,dynamic,23997.25,14362.512133625278,24069.355040217313,-9634.737866374722,72.10504021731322

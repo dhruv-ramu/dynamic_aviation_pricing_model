@@ -1,0 +1,4 @@
+scenario,winner,rule_based_minus_static,dynamic_minus_static,bump_risk_dynamic,bump_risk_max,mean_book_rate_dynamic,mean_denied_dynamic
+baseline,rule_based,3144.050000000001,2212.800000000001,0.0,0.0,0.833445945945946,0.0
+higher_overbooking,rule_based,3144.050000000001,2212.800000000001,0.0,0.0,0.7866709183673469,0.0
+overbook_bump_stress,dynamic,-9634.737866374722,72.10504021731322,0.0875,1.0,0.8271658415841585,0.3625

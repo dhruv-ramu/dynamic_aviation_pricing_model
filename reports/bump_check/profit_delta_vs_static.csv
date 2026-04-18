@@ -1,0 +1,4 @@
+scenario,profit_static,delta_rule_minus_static,delta_dynamic_minus_static
+baseline,14565.525,3144.050000000001,2212.800000000001
+higher_overbooking,14565.525,3144.050000000001,2212.800000000001
+overbook_bump_stress,23997.25,-9634.737866374722,72.10504021731322

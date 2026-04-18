@@ -42,6 +42,7 @@ def summarize_results(results: list[FlightSimulationResult]) -> dict[str, float]
     avg_fares = np.array([m.avg_fare for m in metrics_list])
     denied = np.array([m.denied_boardings for m in metrics_list], dtype=float)
     nosh = np.array([m.no_shows for m in metrics_list], dtype=float)
+    book_rate = np.array([m.booking_rate for m in metrics_list], dtype=float)
 
     bump_risk = float(np.mean(denied > 0.0))
 
@@ -50,6 +51,7 @@ def summarize_results(results: list[FlightSimulationResult]) -> dict[str, float]
         "std_profit": float(np.std(profits, ddof=0)),
         "mean_accepted_booking_load_factor": float(np.mean(acc_lf)),
         "mean_boarded_load_factor": float(np.mean(bd_lf)),
+        "mean_booking_rate": float(np.mean(book_rate)),
         "mean_avg_fare": float(np.mean(avg_fares)),
         "mean_denied_boardings": float(np.mean(denied)),
         "bump_risk": bump_risk,
