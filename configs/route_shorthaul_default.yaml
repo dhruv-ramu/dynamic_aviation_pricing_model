@@ -59,9 +59,14 @@ business_wtp_sigma: 95.0
 # If false, daily arrivals use round(expected lambda) instead of Poisson draws (tests / debugging).
 demand_stochastic: true
 
-# Operations / revenue placeholders (no-show logic not simulated yet).
+# --- Departure-day realism (no-shows, overbooking cap, denied boarding economics) ---
 no_show_mean: 0.10
+overbooking_enabled: true
 overbooking_limit_pct: 0.03
+denied_boarding_delay_hours: 2.5
+denied_boarding_compensation_multiplier: 4.0
+denied_boarding_compensation_cap: 2150.0
+goodwill_penalty_per_bumped_passenger: 150.0
 
 ancillary_mean: 30.0
 

@@ -1,7 +1,7 @@
 # Top-level experiment defaults. Route-level economics live in route_shorthaul_default.yaml.
 extends: route_shorthaul_default.yaml
 
-# Phase 2 demand is configured in route_shorthaul_default.yaml (curve, arrivals, WTP, segment mix).
+# Phase 2 demand and Phase 3–4 pricing / operations live in route_shorthaul_default.yaml.
 # Example overrides (uncomment to experiment):
 # rng_seed: 123
 # booking_horizon_days: 45

@@ -165,6 +165,16 @@ def _validate_simulation_config(cfg: SimulationConfig) -> None:
         cfg.static_bucket_index < 0 or cfg.static_bucket_index >= len(cfg.fare_buckets)
     ):
         raise ValueError("static_bucket_index out of range for fare_buckets")
+    if cfg.denied_boarding_compensation_multiplier < 0 or cfg.denied_boarding_compensation_cap < 0:
+        raise ValueError("Denied-boarding compensation parameters must be non-negative")
+    if cfg.goodwill_penalty_per_bumped_passenger < 0:
+        raise ValueError("goodwill_penalty_per_bumped_passenger must be non-negative")
+    if cfg.denied_boarding_delay_hours < 0:
+        raise ValueError("denied_boarding_delay_hours must be non-negative")
+    if not (0.0 <= cfg.no_show_mean <= 1.0):
+        raise ValueError("no_show_mean must lie in [0, 1]")
+    if cfg.overbooking_limit_pct < 0:
+        raise ValueError("overbooking_limit_pct must be non-negative")
 
 
 def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
@@ -231,6 +241,15 @@ def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
             competitor_match_threshold=float(raw.get("competitor_match_threshold", 12.0)),
             competitor_response_strength=float(raw.get("competitor_response_strength", 0.3)),
             static_bucket_index=static_bucket_index,
+            overbooking_enabled=bool(raw.get("overbooking_enabled", True)),
+            denied_boarding_delay_hours=float(raw.get("denied_boarding_delay_hours", 2.5)),
+            denied_boarding_compensation_multiplier=float(
+                raw.get("denied_boarding_compensation_multiplier", 4.0)
+            ),
+            denied_boarding_compensation_cap=float(raw.get("denied_boarding_compensation_cap", 2150.0)),
+            goodwill_penalty_per_bumped_passenger=float(
+                raw.get("goodwill_penalty_per_bumped_passenger", 150.0)
+            ),
         )
     except KeyError as exc:  # pragma: no cover - defensive; validated earlier
         raise KeyError(f"Missing key while building SimulationConfig: {exc}") from exc

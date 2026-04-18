@@ -62,3 +62,8 @@ class SimulationConfig:
     competitor_match_threshold: float = 12.0
     competitor_response_strength: float = 0.3
     static_bucket_index: int | None = None
+    overbooking_enabled: bool = True
+    denied_boarding_delay_hours: float = 2.5
+    denied_boarding_compensation_multiplier: float = 4.0
+    denied_boarding_compensation_cap: float = 2150.0
+    goodwill_penalty_per_bumped_passenger: float = 150.0

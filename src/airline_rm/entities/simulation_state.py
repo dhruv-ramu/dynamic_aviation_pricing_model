@@ -27,10 +27,14 @@ class SimulationState:
     last_quoted_fare: float | None = None
     booking_pace_gap: float = 0.0
     fare_history: list[tuple[int, float, float | None]] = field(default_factory=list)
+    booking_limit: int = 0
 
     @property
     def seats_remaining(self) -> int:
-        return max(self.flight.capacity - self.seats_sold, 0)
+        """Remaining booking authorizations (respects overbooking limit when set)."""
+
+        limit = self.booking_limit if self.booking_limit > 0 else self.flight.capacity
+        return max(0, limit - self.seats_sold)
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,3 +53,10 @@ class FlightSimulationResult:
     rejected_due_to_capacity: int = 0
     sellout_day: int | None = None
     fare_series: tuple[float, ...] = ()
+    physical_capacity: int = 0
+    booking_limit: int = 0
+    bookings_accepted: int = 0
+    boarded_passengers: int = 0
+    no_shows: int = 0
+    denied_boardings: int = 0
+    denied_boarding_cost: float = 0.0

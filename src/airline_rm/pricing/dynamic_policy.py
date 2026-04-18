@@ -25,7 +25,7 @@ class DynamicPricingPolicy(PricingPolicy):
         competitor_fare: float | None,
     ) -> PricingAction:
         cap = state.flight.capacity
-        seats_rem = state.seats_remaining
+        seats_rem = max(0, cap - min(state.seats_sold, cap))
 
         total_intensity = float(self._config.expected_total_demand * self._config.demand_multiplier)
         expected_sold = min(cap, total_intensity * self._curve.cumulative_share(days_until_departure))
@@ -49,7 +49,7 @@ class DynamicPricingPolicy(PricingPolicy):
             idx = self._buckets.raise_bucket(idx, 1)
             note = "dyn:ahead_pace"
 
-        if seats_rem / float(cap) <= self._config.low_load_factor_threshold:
+        if cap > 0 and seats_rem / float(cap) <= self._config.low_load_factor_threshold:
             idx = self._buckets.raise_bucket(idx, 1)
             note = "dyn:tight_inventory"
 

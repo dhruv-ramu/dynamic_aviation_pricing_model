@@ -23,7 +23,7 @@ class RuleBasedPricingPolicy(PricingPolicy):
         competitor_fare: float | None,
     ) -> PricingAction:
         cap = state.flight.capacity
-        seats_rem = state.seats_remaining
+        seats_rem = max(0, cap - min(state.seats_sold, cap))
 
         idx = self._buckets.bucket_for_load_and_time(
             days_until_departure,

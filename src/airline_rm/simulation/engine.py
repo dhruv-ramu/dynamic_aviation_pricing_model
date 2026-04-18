@@ -1,4 +1,4 @@
-"""Single-flight simulation engine with modular stochastic demand and policy-driven fares."""
+"""Single-flight simulation engine with demand, pricing, and departure-day outcomes."""
 
 from __future__ import annotations
 
@@ -18,6 +18,9 @@ from airline_rm.entities.route import Route
 from airline_rm.entities.simulation_state import FlightSimulationResult, SimulationState
 from airline_rm.pricing.competitor_response import CompetitorPricingModel
 from airline_rm.pricing.pricing_policy_base import PricingPolicy
+from airline_rm.revenue.denied_boarding_cost import DeniedBoardingCostModel
+from airline_rm.revenue.no_show import NoShowModel
+from airline_rm.revenue.overbooking import OverbookingModel
 from airline_rm.types import SimulationConfig
 
 
@@ -36,11 +39,34 @@ def _build_flight(config: SimulationConfig) -> Flight:
     )
 
 
-def _variable_operating_cost(config: SimulationConfig, seats_sold: int) -> float:
-    """Seat-mile variable cost for sold seats (transparent placeholder)."""
+def _variable_operating_cost_for_boarded(config: SimulationConfig, boarded_passengers: int) -> float:
+    """Seat-mile variable cost for passengers who actually fly."""
 
-    seat_miles = float(config.route_distance_miles) * float(seats_sold)
+    seat_miles = float(config.route_distance_miles) * float(boarded_passengers)
     return float(config.casm_ex) * seat_miles
+
+
+def _departure_day_outcomes(
+    config: SimulationConfig,
+    rng: np.random.Generator,
+    physical_capacity: int,
+    booked: int,
+    ticket_revenue: float,
+) -> tuple[int, int, int, int, float, float]:
+    """Return (no_shows, show_ups, boarded, denied, denied_cost, variable_cost)."""
+
+    no_show_model = NoShowModel.from_simulation_config(config)
+    no_shows = no_show_model.sample_no_shows(booked, rng)
+    show_ups = booked - no_shows
+
+    denied_model = DeniedBoardingCostModel.from_simulation_config(config)
+    denied = denied_model.compute_denied_boardings(show_ups, physical_capacity)
+    boarded = min(show_ups, physical_capacity)
+
+    ref_fare = float(ticket_revenue / booked) if booked > 0 else float(config.base_fare)
+    denied_cost = denied_model.compute_denied_boarding_cost(denied, ref_fare)
+    variable_cost = _variable_operating_cost_for_boarded(config, boarded)
+    return no_shows, show_ups, boarded, denied, denied_cost, variable_cost
 
 
 def run_single_flight_simulation(
@@ -48,10 +74,14 @@ def run_single_flight_simulation(
     policy: PricingPolicy,
     rng: np.random.Generator,
 ) -> FlightSimulationResult:
-    """Simulate bookings day-by-day using demand + competitor-aware pricing."""
+    """Simulate sales through the horizon, then realize no-shows, denied boardings, and costs."""
 
     flight = _build_flight(config)
-    state = SimulationState(flight=flight)
+    physical_capacity = int(flight.capacity)
+    overbooking = OverbookingModel.from_simulation_config(config)
+    booking_limit = overbooking.booking_limit(physical_capacity)
+
+    state = SimulationState(flight=flight, booking_limit=booking_limit)
 
     booking_curve = BookingCurveModel.from_simulation_config(config)
     arrivals = DailyArrivalModel.from_simulation_config(config, booking_curve)
@@ -67,7 +97,7 @@ def run_single_flight_simulation(
         days_until_departure = config.booking_horizon_days - day + 1
 
         expected_sold = min(
-            flight.capacity,
+            physical_capacity,
             total_intensity * booking_curve.cumulative_share(days_until_departure),
         )
         state.booking_pace_gap = float(state.seats_sold - expected_sold)
@@ -91,7 +121,7 @@ def run_single_flight_simulation(
                 state.rejected_due_to_price += 1
                 continue
 
-            if state.seats_remaining <= 0:
+            if not overbooking.allowed_to_accept_more(state.seats_sold, booking_limit):
                 state.rejected_due_to_capacity += 1
                 continue
 
@@ -111,18 +141,26 @@ def run_single_flight_simulation(
             else:
                 state.bookings_leisure += 1
 
-            if state.seats_sold >= state.flight.capacity and state.sellout_day is None:
+            if state.seats_sold >= booking_limit and state.sellout_day is None:
                 state.sellout_day = day
 
         state.last_quoted_fare = fare
 
-    total_cost = float(config.fixed_flight_cost) + _variable_operating_cost(config, state.seats_sold)
+    booked = state.seats_sold
+    no_shows, _show_ups, boarded, denied, denied_cost, variable_cost = _departure_day_outcomes(
+        config,
+        rng,
+        physical_capacity,
+        booked,
+        state.total_ticket_revenue,
+    )
+    total_cost = float(config.fixed_flight_cost) + variable_cost + denied_cost
     fare_series = tuple(f for _, f, _ in state.fare_history)
 
     return FlightSimulationResult(
         flight=flight,
         booking_horizon_days=int(config.booking_horizon_days),
-        seats_sold=state.seats_sold,
+        seats_sold=booked,
         total_ticket_revenue=state.total_ticket_revenue,
         total_ancillary_revenue=state.total_ancillary_revenue,
         total_cost=total_cost,
@@ -132,4 +170,11 @@ def run_single_flight_simulation(
         rejected_due_to_capacity=state.rejected_due_to_capacity,
         sellout_day=state.sellout_day,
         fare_series=fare_series,
+        physical_capacity=physical_capacity,
+        booking_limit=booking_limit,
+        bookings_accepted=booked,
+        boarded_passengers=boarded,
+        no_shows=no_shows,
+        denied_boardings=denied,
+        denied_boarding_cost=denied_cost,
     )

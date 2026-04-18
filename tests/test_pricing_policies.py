@@ -26,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 def _flight_state(*, capacity: int, sold: int) -> SimulationState:
     route = Route("SEA", "SFO", 400.0)
     flight = Flight("T", route, date(2026, 6, 1), capacity=capacity)
-    return SimulationState(flight=flight, seats_sold=sold)
+    return SimulationState(flight=flight, seats_sold=sold, booking_limit=capacity)
 
 
 def test_static_policy_constant_fare() -> None:
@@ -81,6 +81,7 @@ def test_compare_default_policies_returns_three_rows() -> None:
     df = compare_default_policies(cfg)
     assert len(df) == 3
     assert set(df["policy"]) == {"static", "rule_based", "dynamic"}
+    assert "mean_profit" in df.columns
 
 
 def test_rule_based_fares_vary_across_horizon_in_engine() -> None:
@@ -118,4 +119,4 @@ def test_engine_runs_each_policy() -> None:
     ):
         rng = make_generator(base)
         result = run_single_flight_simulation(base, pol, rng)
-        assert result.seats_sold <= base.capacity, name
+        assert result.seats_sold <= result.booking_limit, name
