@@ -21,6 +21,8 @@ def test_load_base_config_with_extends() -> None:
     assert cfg.route_origin == "SEA"
     assert cfg.expected_total_demand == 210.0
     assert cfg.booking_curve_type == "logistic"
+    assert cfg.leisure_wtp_mean == 208.0
+    assert cfg.late_business_share == 0.42
 
 
 def test_missing_required_key_errors(tmp_path: Path) -> None:

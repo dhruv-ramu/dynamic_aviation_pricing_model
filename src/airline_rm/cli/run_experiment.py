@@ -9,6 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from airline_rm.config import load_simulation_config
+from airline_rm.evaluation.diagnostics import summarize_accepted_segment_mix
 from airline_rm.evaluation.metrics import compute_metrics
 from airline_rm.evaluation.policy_comparison import compare_default_policies, compare_policies_monte_carlo
 from airline_rm.evaluation.sensitivity import sweep_parameter
@@ -126,6 +127,12 @@ def main() -> None:
         results = run_many(policy, config, n_runs=args.n_runs, base_seed=config.rng_seed)
         summary = summarize_results(results)
         print(pd.Series(summary).to_string())
+        seg = summarize_accepted_segment_mix(results)
+        print("--- accepted segment mix (Monte Carlo) ---")
+        print(f"  mean_accepted_business: {seg['mean_accepted_business']:.2f}")
+        print(f"  mean_accepted_leisure: {seg['mean_accepted_leisure']:.2f}")
+        print(f"  mean_business_share_of_accepted: {seg['mean_business_share_of_accepted']:.3f}")
+        print(f"  mean_leisure_share_of_accepted: {seg['mean_leisure_share_of_accepted']:.3f}")
         return
 
     rng = make_generator(config)

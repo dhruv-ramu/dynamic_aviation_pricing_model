@@ -43,18 +43,20 @@ booking_curve_type: "logistic"
 booking_curve_midpoint: 18.0
 booking_curve_steepness: 0.45
 
-# Segment mix: business share rises as departure approaches (logistic in days-until-departure).
-early_business_share: 0.14
-late_business_share: 0.58
-segment_transition_midpoint_days: 22.0
-segment_transition_steepness: 0.35
+# Segment mix (calibrated 2026): booking intensity rises late while mix was also business-heavy late,
+# which stacked with high fares to skew accepted bookings. Lower late share, softer slope, and a
+# lower midpoint keep business-tilted *arrivals* concentrated closer to departure only.
+early_business_share: 0.10
+late_business_share: 0.42
+segment_transition_midpoint_days: 14.0
+segment_transition_steepness: 0.24
 
-# WTP: means and sigmas are in USD; sigma is interpreted as a standard deviation in dollar space
-# (converted internally to lognormal parameters).
-leisure_wtp_mean: 165.0
-leisure_wtp_sigma: 55.0
-business_wtp_mean: 340.0
-business_wtp_sigma: 95.0
+# WTP (calibrated 2026): leisure mean was too low vs typical quoted fares (~$159–$220), so threshold
+# conversion rejected most leisure draws. Raised leisure mean (still < business) and trimmed premium.
+leisure_wtp_mean: 208.0
+leisure_wtp_sigma: 52.0
+business_wtp_mean: 315.0
+business_wtp_sigma: 88.0
 
 # If false, daily arrivals use round(expected lambda) instead of Poisson draws (tests / debugging).
 demand_stochastic: true
