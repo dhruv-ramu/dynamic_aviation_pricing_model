@@ -103,8 +103,11 @@ def run_single_flight_simulation(
         state.booking_pace_gap = float(state.seats_sold - expected_sold)
 
         comp_fare = competitor.competitor_fare(days_until_departure, state.last_quoted_fare, rng)
+        prev_bucket = state.current_bucket_index
         action = policy.decide(days_until_departure, state, competitor_fare=comp_fare)
         fare = action.fare
+        if action.bucket_index != prev_bucket:
+            state.dynamic_last_bucket_change_day = day
         state.current_bucket_index = action.bucket_index
         state.fare_history.append((day, fare, comp_fare))
 

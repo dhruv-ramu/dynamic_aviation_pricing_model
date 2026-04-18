@@ -15,6 +15,8 @@ class PricingAction:
     bucket_index: int
     fare: float
     note: str = ""
+    # Optional structured diagnostics (e.g. dynamic policy); keep immutable for frozen=True.
+    diagnostics: tuple[tuple[str, str | float | int], ...] | None = None
 
 
 class PricingPolicy(ABC):
