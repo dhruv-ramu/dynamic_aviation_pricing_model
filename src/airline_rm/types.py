@@ -61,6 +61,24 @@ class SimulationConfig:
     competitor_noise_std: float = 4.0
     competitor_match_threshold: float = 12.0
     competitor_response_strength: float = 0.3
+    # --- Dynamic policy heuristics (profit-oriented; ignored by static/rule_based) ---
+    dynamic_pace_ratio_raise_threshold: float = 1.05
+    dynamic_pace_ratio_lower_threshold: float = 0.95
+    dynamic_pace_gap_raise_abs: float = 10.0
+    dynamic_pace_gap_lower_abs: float = -10.0
+    dynamic_raise_bucket_steps_ahead: int = 2
+    dynamic_lower_bucket_steps_behind: int = 1
+    dynamic_pace_tight_seats_rem_frac: float = 0.45
+    dynamic_pace_extra_raise_when_tight: int = 1
+    dynamic_late_floor_days_until_departure: int = 10
+    dynamic_min_bucket_index_late: int = 1
+    dynamic_scarcity_fill_ratio_1: float = 0.70
+    dynamic_scarcity_fill_ratio_2: float = 0.85
+    dynamic_scarcity_raise_steps_1: int = 1
+    dynamic_scarcity_raise_steps_2: int = 2
+    dynamic_demand_pressure_ratio: float = 1.15
+    dynamic_competitor_disable_fill_ratio: float = 0.80
+    dynamic_policy_debug: bool = False
     static_bucket_index: int | None = None
     overbooking_enabled: bool = True
     denied_boarding_delay_hours: float = 2.5

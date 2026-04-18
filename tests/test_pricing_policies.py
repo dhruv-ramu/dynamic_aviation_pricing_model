@@ -55,21 +55,114 @@ def test_rule_based_expensive_when_tight_inventory() -> None:
 
 def test_dynamic_lowers_when_far_behind_pace() -> None:
     cfg = load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml")
-    cfg = replace(cfg, pace_gap_lower_threshold=-0.01, pace_gap_raise_threshold=500.0)
+    cfg = replace(cfg, dynamic_pace_gap_lower_abs=-0.01, dynamic_pace_ratio_raise_threshold=50.0)
     pol = DynamicPricingPolicy(cfg)
     st = _flight_state(capacity=180, sold=0)
-    act = pol.decide(3, st, competitor_fare=None)
-    assert "behind_pace" in act.note or act.bucket_index == FareBucketSystem.from_values(cfg.fare_buckets).min_bucket()
+    act = pol.decide(20, st, competitor_fare=None)
+    buckets = FareBucketSystem.from_values(cfg.fare_buckets)
+    anchor = buckets.bucket_for_load_and_time(
+        20,
+        max(0, 180 - 0),
+        180,
+        early_window_days=cfg.early_window_days,
+        late_window_days=cfg.late_window_days,
+        low_load_factor_threshold=cfg.low_load_factor_threshold,
+        high_load_factor_threshold=cfg.high_load_factor_threshold,
+    )
+    assert "pace-" in act.note
+    assert act.bucket_index == buckets.lower_bucket(anchor, cfg.dynamic_lower_bucket_steps_behind)
 
 
 def test_dynamic_raises_when_far_ahead_on_pace() -> None:
     cfg = load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml")
-    cfg = replace(cfg, pace_gap_raise_threshold=-500.0, pace_gap_lower_threshold=-1_000.0)
+    cfg = replace(cfg, dynamic_pace_ratio_raise_threshold=0.5, dynamic_pace_gap_raise_abs=-1e9)
     pol = DynamicPricingPolicy(cfg)
-    st = _flight_state(capacity=180, sold=175)
+    st = _flight_state(capacity=180, sold=20)
     act = pol.decide(25, st, competitor_fare=None)
-    max_b = FareBucketSystem.from_values(cfg.fare_buckets).max_bucket()
-    assert "ahead_pace" in act.note or act.bucket_index >= max_b - 1
+    buckets = FareBucketSystem.from_values(cfg.fare_buckets)
+    anchor = buckets.bucket_for_load_and_time(
+        25,
+        160,
+        180,
+        early_window_days=cfg.early_window_days,
+        late_window_days=cfg.late_window_days,
+        low_load_factor_threshold=cfg.low_load_factor_threshold,
+        high_load_factor_threshold=cfg.high_load_factor_threshold,
+    )
+    assert "pace+" in act.note
+    assert act.bucket_index >= buckets.raise_bucket(anchor, cfg.dynamic_raise_bucket_steps_ahead)
+
+
+def test_dynamic_scarcity_raises_bucket() -> None:
+    base = load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml")
+    neutral_pace = dict(
+        dynamic_pace_ratio_raise_threshold=50.0,
+        dynamic_pace_ratio_lower_threshold=0.01,
+        dynamic_pace_gap_raise_abs=500.0,
+        dynamic_pace_gap_lower_abs=-500.0,
+    )
+    tight = replace(
+        base,
+        **neutral_pace,
+        dynamic_scarcity_fill_ratio_1=0.05,
+        dynamic_scarcity_fill_ratio_2=0.08,
+        dynamic_scarcity_raise_steps_1=0,
+        dynamic_scarcity_raise_steps_2=4,
+    )
+    loose = replace(
+        tight,
+        dynamic_scarcity_fill_ratio_1=0.99,
+        dynamic_scarcity_fill_ratio_2=0.995,
+    )
+    # Neutral pace, mid anchor (needs unsold share > high LF threshold), scarcity is the spread.
+    st = _flight_state(capacity=180, sold=20)
+    hi = DynamicPricingPolicy(tight).decide(25, st, competitor_fare=None)
+    lo = DynamicPricingPolicy(loose).decide(25, st, competitor_fare=None)
+    assert hi.bucket_index > lo.bucket_index
+    assert "scar+" in hi.note
+
+
+def test_dynamic_late_floor_blocks_deepest_discount() -> None:
+    cfg = load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml")
+    cfg = replace(
+        cfg,
+        dynamic_late_floor_days_until_departure=60,
+        dynamic_min_bucket_index_late=3,
+        dynamic_pace_ratio_lower_threshold=5.0,
+        dynamic_pace_gap_lower_abs=-1e9,
+        dynamic_lower_bucket_steps_behind=1,
+    )
+    pol = DynamicPricingPolicy(cfg)
+    st = _flight_state(capacity=180, sold=0)
+    act = pol.decide(5, st, competitor_fare=None)
+    assert act.bucket_index >= cfg.dynamic_min_bucket_index_late
+
+
+def test_dynamic_ignores_competitor_when_seats_tight() -> None:
+    cfg = load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml")
+    cfg = replace(cfg, competitor_response_strength=1.0, competitor_match_threshold=1.0)
+    pol = DynamicPricingPolicy(cfg)
+    st = _flight_state(capacity=180, sold=165)
+    no_comp = pol.decide(12, st, competitor_fare=None)
+    cheap_comp = pol.decide(12, st, competitor_fare=1.0)
+    assert no_comp.bucket_index == cheap_comp.bucket_index
+
+
+def test_dynamic_bucket_always_in_bounds() -> None:
+    cfg = replace(
+        load_simulation_config(PROJECT_ROOT / "configs" / "base_config.yaml"),
+        dynamic_raise_bucket_steps_ahead=9,
+        dynamic_scarcity_raise_steps_2=9,
+        dynamic_pace_ratio_raise_threshold=0.5,
+        dynamic_pace_gap_raise_abs=-1e9,
+        dynamic_demand_pressure_ratio=1.0,
+    )
+    pol = DynamicPricingPolicy(cfg)
+    mx = FareBucketSystem.from_values(cfg.fare_buckets).max_bucket()
+    for sold in (0, 50, 179):
+        for d in (1, 15, 45, 60):
+            act = pol.decide(d, _flight_state(capacity=180, sold=sold), competitor_fare=None)
+            assert 0 <= act.bucket_index <= mx
 
 
 def test_compare_default_policies_returns_three_rows() -> None:

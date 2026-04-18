@@ -24,9 +24,35 @@ pace_gap_raise_threshold: 6.0
 pace_gap_lower_threshold: -6.0
 competitor_base_offset: -12.0
 competitor_noise_std: 3.0
-competitor_match_threshold: 12.0
-competitor_response_strength: 0.3
+# Competitor nudge (rule_based + dynamic). Higher threshold / lower strength = less matching.
+competitor_match_threshold: 25.0
+competitor_response_strength: 0.35
 # static_bucket_index: null  # default = most expensive bucket (legacy high fare)
+
+# --- Dynamic pricing heuristics (profit-oriented; see DynamicPricingPolicy) ---
+# Pace vs curve: expected_cum = cumulative_share(d) * expected_total_demand * demand_multiplier
+dynamic_pace_ratio_raise_threshold: 1.05
+dynamic_pace_ratio_lower_threshold: 0.95
+dynamic_pace_gap_raise_abs: 10.0
+dynamic_pace_gap_lower_abs: -10.0
+dynamic_raise_bucket_steps_ahead: 2
+dynamic_lower_bucket_steps_behind: 1
+# Extra raise when few seats remain but still ahead of pace (unsold share <= this fraction)
+dynamic_pace_tight_seats_rem_frac: 0.45
+dynamic_pace_extra_raise_when_tight: 1
+# Late booking floor (days until departure); avoid fire-sale to bucket 0
+dynamic_late_floor_days_until_departure: 10
+dynamic_min_bucket_index_late: 1
+# Physical seat fill triggers (sold capped at capacity)
+dynamic_scarcity_fill_ratio_1: 0.70
+dynamic_scarcity_fill_ratio_2: 0.85
+dynamic_scarcity_raise_steps_1: 1
+dynamic_scarcity_raise_steps_2: 2
+# Residual demand vs remaining seats (simple protection proxy)
+dynamic_demand_pressure_ratio: 1.2
+# Ignore competitor matching when seat fill exceeds this (reduces late underpricing)
+dynamic_competitor_disable_fill_ratio: 0.80
+# dynamic_policy_debug: false
 
 # Legacy elasticity placeholders (reserved for future pricing/demand calibration).
 business_share_late: 0.35

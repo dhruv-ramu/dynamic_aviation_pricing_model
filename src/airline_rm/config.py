@@ -161,6 +161,33 @@ def _validate_simulation_config(cfg: SimulationConfig) -> None:
         raise ValueError("pace_gap_lower_threshold must be < pace_gap_raise_threshold")
     if not (0.0 <= cfg.competitor_response_strength <= 1.0):
         raise ValueError("competitor_response_strength should be in [0, 1]")
+    if not (0.0 < cfg.dynamic_pace_ratio_lower_threshold < 1.0 < cfg.dynamic_pace_ratio_raise_threshold):
+        raise ValueError("dynamic pace ratio thresholds must satisfy 0 < lower < 1 < raise")
+    if cfg.dynamic_pace_gap_lower_abs >= 0 or cfg.dynamic_pace_gap_raise_abs <= 0:
+        raise ValueError("dynamic pace gap abs thresholds must be negative (lower) and positive (raise)")
+    if cfg.dynamic_raise_bucket_steps_ahead < 0 or cfg.dynamic_lower_bucket_steps_behind < 0:
+        raise ValueError("dynamic pace bucket step counts must be non-negative")
+    if cfg.dynamic_pace_extra_raise_when_tight < 0:
+        raise ValueError("dynamic_pace_extra_raise_when_tight must be non-negative")
+    if not (0.0 < cfg.dynamic_pace_tight_seats_rem_frac <= 1.0):
+        raise ValueError("dynamic_pace_tight_seats_rem_frac must lie in (0, 1]")
+    if cfg.dynamic_late_floor_days_until_departure < 0:
+        raise ValueError("dynamic_late_floor_days_until_departure must be non-negative")
+    if cfg.dynamic_min_bucket_index_late < 0:
+        raise ValueError("dynamic_min_bucket_index_late must be non-negative")
+    max_bucket = len(cfg.fare_buckets) - 1
+    if cfg.dynamic_min_bucket_index_late > max_bucket:
+        raise ValueError("dynamic_min_bucket_index_late exceeds highest fare bucket index")
+    if not (0.0 < cfg.dynamic_scarcity_fill_ratio_1 < cfg.dynamic_scarcity_fill_ratio_2 < 1.0):
+        raise ValueError("dynamic scarcity fill thresholds must satisfy 0 < t1 < t2 < 1")
+    if cfg.dynamic_scarcity_raise_steps_1 < 0 or cfg.dynamic_scarcity_raise_steps_2 < 0:
+        raise ValueError("dynamic scarcity raise steps must be non-negative")
+    if cfg.dynamic_scarcity_raise_steps_2 < cfg.dynamic_scarcity_raise_steps_1:
+        raise ValueError("dynamic_scarcity_raise_steps_2 should be >= dynamic_scarcity_raise_steps_1")
+    if cfg.dynamic_demand_pressure_ratio < 1.0:
+        raise ValueError("dynamic_demand_pressure_ratio must be >= 1")
+    if not (0.0 < cfg.dynamic_competitor_disable_fill_ratio <= 1.0):
+        raise ValueError("dynamic_competitor_disable_fill_ratio must lie in (0, 1]")
     if cfg.static_bucket_index is not None and (
         cfg.static_bucket_index < 0 or cfg.static_bucket_index >= len(cfg.fare_buckets)
     ):
@@ -250,6 +277,27 @@ def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
             goodwill_penalty_per_bumped_passenger=float(
                 raw.get("goodwill_penalty_per_bumped_passenger", 150.0)
             ),
+            dynamic_pace_ratio_raise_threshold=float(raw.get("dynamic_pace_ratio_raise_threshold", 1.05)),
+            dynamic_pace_ratio_lower_threshold=float(raw.get("dynamic_pace_ratio_lower_threshold", 0.95)),
+            dynamic_pace_gap_raise_abs=float(raw.get("dynamic_pace_gap_raise_abs", 10.0)),
+            dynamic_pace_gap_lower_abs=float(raw.get("dynamic_pace_gap_lower_abs", -10.0)),
+            dynamic_raise_bucket_steps_ahead=int(raw.get("dynamic_raise_bucket_steps_ahead", 2)),
+            dynamic_lower_bucket_steps_behind=int(raw.get("dynamic_lower_bucket_steps_behind", 1)),
+            dynamic_pace_tight_seats_rem_frac=float(raw.get("dynamic_pace_tight_seats_rem_frac", 0.45)),
+            dynamic_pace_extra_raise_when_tight=int(raw.get("dynamic_pace_extra_raise_when_tight", 1)),
+            dynamic_late_floor_days_until_departure=int(
+                raw.get("dynamic_late_floor_days_until_departure", 10)
+            ),
+            dynamic_min_bucket_index_late=int(raw.get("dynamic_min_bucket_index_late", 1)),
+            dynamic_scarcity_fill_ratio_1=float(raw.get("dynamic_scarcity_fill_ratio_1", 0.70)),
+            dynamic_scarcity_fill_ratio_2=float(raw.get("dynamic_scarcity_fill_ratio_2", 0.85)),
+            dynamic_scarcity_raise_steps_1=int(raw.get("dynamic_scarcity_raise_steps_1", 1)),
+            dynamic_scarcity_raise_steps_2=int(raw.get("dynamic_scarcity_raise_steps_2", 2)),
+            dynamic_demand_pressure_ratio=float(raw.get("dynamic_demand_pressure_ratio", 1.15)),
+            dynamic_competitor_disable_fill_ratio=float(
+                raw.get("dynamic_competitor_disable_fill_ratio", 0.80)
+            ),
+            dynamic_policy_debug=bool(raw.get("dynamic_policy_debug", False)),
         )
     except KeyError as exc:  # pragma: no cover - defensive; validated earlier
         raise KeyError(f"Missing key while building SimulationConfig: {exc}") from exc
