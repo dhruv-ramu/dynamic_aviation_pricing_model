@@ -63,8 +63,7 @@ def test_dynamic_uses_previous_bucket_not_anchor() -> None:
     st0 = _flight_state(capacity=180, sold=40)
     act0 = pol.decide(30, st0, competitor_fare=None)
     buckets = FareBucketSystem.from_values(cfg.fare_buckets)
-    initial = buckets.max_bucket() - 1 if buckets.max_bucket() >= 1 else buckets.max_bucket()
-    assert act0.bucket_index == initial
+    assert act0.bucket_index == buckets.max_bucket()
     st1 = _flight_state(capacity=180, sold=40)
     st1.fare_history.append((1, 150.0, None))
     st1.current_bucket_index = 0

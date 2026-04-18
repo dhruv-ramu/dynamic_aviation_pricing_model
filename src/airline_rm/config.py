@@ -294,11 +294,11 @@ def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
             ),
             dynamic_weight_pace=float(raw.get("dynamic_weight_pace", 0.88)),
             dynamic_weight_scarcity=float(raw.get("dynamic_weight_scarcity", 1.22)),
-            dynamic_weight_demand_pressure=float(raw.get("dynamic_weight_demand_pressure", 1.52)),
-            dynamic_score_strong_raise=float(raw.get("dynamic_score_strong_raise", 1.12)),
-            dynamic_score_mild_raise=float(raw.get("dynamic_score_mild_raise", 0.36)),
-            dynamic_score_strong_lower=float(raw.get("dynamic_score_strong_lower", -0.74)),
-            dynamic_bucket_change_deadband=float(raw.get("dynamic_bucket_change_deadband", 0.26)),
+            dynamic_weight_demand_pressure=float(raw.get("dynamic_weight_demand_pressure", 1.62)),
+            dynamic_score_strong_raise=float(raw.get("dynamic_score_strong_raise", 1.02)),
+            dynamic_score_mild_raise=float(raw.get("dynamic_score_mild_raise", 0.24)),
+            dynamic_score_strong_lower=float(raw.get("dynamic_score_strong_lower", -0.88)),
+            dynamic_bucket_change_deadband=float(raw.get("dynamic_bucket_change_deadband", 0.32)),
             dynamic_strong_raise_allows_two_steps=bool(
                 raw.get("dynamic_strong_raise_allows_two_steps", True)
             ),
@@ -309,7 +309,7 @@ def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
             dynamic_scarcity_fill_ratio_1=float(raw.get("dynamic_scarcity_fill_ratio_1", 0.68)),
             dynamic_scarcity_fill_ratio_2=float(raw.get("dynamic_scarcity_fill_ratio_2", 0.84)),
             dynamic_demand_pressure_neutral_ratio=float(
-                raw.get("dynamic_demand_pressure_neutral_ratio", 1.02)
+                raw.get("dynamic_demand_pressure_neutral_ratio", 0.98)
             ),
             dynamic_demand_ratio_score_scale=float(raw.get("dynamic_demand_ratio_score_scale", 0.92)),
             dynamic_competitor_disable_fill_ratio=float(
@@ -322,9 +322,9 @@ def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
             dynamic_late_floor_days_until_departure=int(
                 raw.get("dynamic_late_floor_days_until_departure", 10)
             ),
-            dynamic_min_bucket_index_late=int(raw.get("dynamic_min_bucket_index_late", 1)),
+            dynamic_min_bucket_index_late=int(raw.get("dynamic_min_bucket_index_late", 2)),
             dynamic_late_window_min_bucket_index=int(
-                raw.get("dynamic_late_window_min_bucket_index", 2)
+                raw.get("dynamic_late_window_min_bucket_index", 3)
             ),
             dynamic_min_days_between_bucket_changes=int(
                 raw.get("dynamic_min_days_between_bucket_changes", 0)

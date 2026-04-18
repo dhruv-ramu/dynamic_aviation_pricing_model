@@ -31,9 +31,8 @@ class DynamicPricingPolicy(PricingPolicy):
         cfg = self._config
         if cfg.dynamic_initial_bucket_index is not None:
             return self._buckets.clamp_bucket_index(int(cfg.dynamic_initial_bucket_index))
-        # Default: start one step below the most expensive bucket (profit-oriented, not mid-ladder).
-        mx = self._buckets.max_bucket()
-        return self._buckets.clamp_bucket_index(mx - 1 if mx >= 1 else mx)
+        # Default: start at the most expensive bucket (short-haul RM; configurable override).
+        return self._buckets.max_bucket()
 
     def _base_bucket(self, state: SimulationState) -> int:
         """Yesterday's bucket once sales have started; otherwise configured or middle bucket."""
@@ -179,6 +178,7 @@ class DynamicPricingPolicy(PricingPolicy):
             rel = min(1.0, float(days_until_departure) / float(horizon))
             damp = cfg.dynamic_pace_late_dampen + (1.0 - cfg.dynamic_pace_late_dampen) * rel
             raw *= damp
+            raw *= 0.82
         return float(max(-1.65, min(2.05, raw)))
 
     def _scarcity_score(self, seat_fill: float) -> float:
@@ -198,6 +198,8 @@ class DynamicPricingPolicy(PricingPolicy):
         expected_remaining: float,
         phys_rem: float,
     ) -> tuple[float, float]:
+        """Seat protection uses **physical** seats left: expected remaining shoppers vs cabin capacity."""
+
         cfg = self._config
         denom = max(float(phys_rem), _SEATS_EPS)
         ratio = float(expected_remaining / denom)
