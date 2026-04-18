@@ -1,0 +1,6 @@
+# Top-level experiment defaults. Route-level economics live in route_shorthaul_default.yaml.
+extends: route_shorthaul_default.yaml
+
+# Example overrides (uncomment to experiment):
+# rng_seed: 123
+# booking_horizon_days: 45
