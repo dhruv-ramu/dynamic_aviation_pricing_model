@@ -730,11 +730,19 @@ def _write_appendices(out_root: Path, policy_df: pd.DataFrame) -> None:
         ),
         encoding="utf-8",
     )
-    pivot = policy_df.pivot(index="scenario", columns="policy", values="mean_profit")
-    (app / "scenario_matrix_full.md").write_text(
-        "# Scenario × policy — mean profit\n\n```\n" + pivot.to_string(float_format=lambda x: f"{x:,.2f}") + "\n```\n",
-        encoding="utf-8",
+    def _pivot_block(title: str, col: str, float_fmt) -> str:
+        pv = policy_df.pivot(index="scenario", columns="policy", values=col)
+        return f"## {title}\n\n```\n{pv.to_string(float_format=float_fmt)}\n```\n"
+
+    matrix_md = (
+        "# Scenario × policy — summary pivots\n\n"
+        + _pivot_block("Mean profit ($)", "mean_profit", lambda x: f"{x:,.2f}")
+        + "\n"
+        + _pivot_block("Bump risk (share of runs with denied > 0)", "bump_risk", lambda x: f"{x:.4f}")
+        + "\n"
+        + _pivot_block("Mean denied boardings", "mean_denied_boardings", lambda x: f"{x:.4f}")
     )
+    (app / "scenario_matrix_full.md").write_text(matrix_md, encoding="utf-8")
     (app / "reproducibility.md").write_text(
         dedent(
             """\

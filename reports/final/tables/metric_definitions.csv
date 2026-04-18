@@ -9,5 +9,5 @@ mean_denied_boardings,Mean count of involuntarily denied boardings per run.,Depa
 bump_risk,Fraction of Monte Carlo runs with at least one denied boarding.,mean(1[denied_boardings > 0]).,Operational tail risk indicator.
 mean_no_show_count,Average realized no-shows per run.,Sampled from binomial model at departure.,Interacts with overbooking to set bump frequency.
 mean_ticket_revenue,Average ticket (fare) revenue per run.,"Sum of accepted booking fares per run, then mean.",Excludes ancillary; before denied-boarding refunds if modeled.
-mean_ancillary_revenue,Average ancillary revenue per boarded passenger per run.,Per `compute_metrics` ancillary model.,Typically scales with boarded count.
+mean_ancillary_revenue,Average total ancillary revenue per run.,Each accepted booking adds `ancillary_mean` at sale; sum over the run.,"Scales with accepted bookings, not boarded bodies."
 mean_total_cost,Average total operating plus bump-related cost per run.,CASM-based operating cost plus denied-boarding compensation and goodwill.,Subtract from revenue to reconcile to profit where definitions align.
