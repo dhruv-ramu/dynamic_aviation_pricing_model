@@ -8,9 +8,25 @@ route_distance_miles: 450
 booking_horizon_days: 60
 capacity: 180
 
-# Reference fare and ordered buckets (high to low is conventional; static policy uses first bucket).
+# Reference fare and fare ladder (any order; internally sorted with index 0 = cheapest).
 base_fare: 140.0
 fare_buckets: [220.0, 189.0, 159.0, 139.0, 119.0]
+# Optional YAML alias overriding fare_buckets if set:
+# fare_bucket_values: [119, 139, 159, 189, 220]
+
+# --- Pricing policies (static | rule_based | dynamic) ---
+pricing_policy: "static"
+early_window_days: 45
+late_window_days: 14
+low_load_factor_threshold: 0.35
+high_load_factor_threshold: 0.85
+pace_gap_raise_threshold: 6.0
+pace_gap_lower_threshold: -6.0
+competitor_base_offset: -12.0
+competitor_noise_std: 3.0
+competitor_match_threshold: 12.0
+competitor_response_strength: 0.3
+# static_bucket_index: null  # default = most expensive bucket (legacy high fare)
 
 # Legacy elasticity placeholders (reserved for future pricing/demand calibration).
 business_share_late: 0.35
@@ -53,7 +69,7 @@ ancillary_mean: 30.0
 casm_ex: 0.14
 fixed_flight_cost: 7000.0
 
-# competitor_mode: reserved for later ("none", "mirror", etc.)
-competitor_mode: "none"
+# competitor_mode: none | static | reactive (reactive uses previous-day our fare).
+competitor_mode: "static"
 
 rng_seed: 42

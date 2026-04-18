@@ -10,8 +10,9 @@ SeatCount: TypeAlias = int
 USD: TypeAlias = float
 Miles: TypeAlias = float
 
-CompetitorMode: TypeAlias = Literal["none", "mirror", "ignore"]
+CompetitorMode: TypeAlias = Literal["none", "static", "reactive"]
 BookingCurveTypeName: TypeAlias = Literal["logistic"]
+PricingPolicyName: TypeAlias = Literal["static", "rule_based", "dynamic"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,3 +50,15 @@ class SimulationConfig:
     route_origin: str = "UNK"
     route_destination: str = "UNK"
     demand_stochastic: bool = True
+    pricing_policy: str = "static"
+    early_window_days: int = 45
+    late_window_days: int = 14
+    low_load_factor_threshold: float = 0.35
+    high_load_factor_threshold: float = 0.85
+    pace_gap_raise_threshold: float = 6.0
+    pace_gap_lower_threshold: float = -6.0
+    competitor_base_offset: float = -12.0
+    competitor_noise_std: float = 4.0
+    competitor_match_threshold: float = 12.0
+    competitor_response_strength: float = 0.3
+    static_bucket_index: int | None = None

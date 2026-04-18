@@ -22,7 +22,9 @@ def test_engine_returns_typed_result_within_capacity() -> None:
     assert isinstance(result, FlightSimulationResult)
     assert 0 <= result.seats_sold <= cfg.capacity
     assert result.bookings_business + result.bookings_leisure == result.seats_sold
-    assert result.total_ticket_revenue == result.seats_sold * cfg.fare_buckets[0]
+    max_fare = max(cfg.fare_buckets)
+    assert result.total_ticket_revenue == result.seats_sold * max_fare
+    assert len(set(result.fare_series)) == 1
 
 
 def test_engine_is_reproducible_for_fixed_seed() -> None:

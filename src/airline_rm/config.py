@@ -7,7 +7,7 @@ from typing import Any, Mapping
 
 import yaml
 
-from airline_rm.types import BookingCurveTypeName, SimulationConfig
+from airline_rm.types import BookingCurveTypeName, PricingPolicyName, SimulationConfig
 
 REQUIRED_FIELDS: tuple[str, ...] = (
     "booking_horizon_days",
@@ -103,6 +103,22 @@ def _validate_required_fields(raw: Mapping[str, Any], source: Path) -> None:
         )
 
 
+def _parse_pricing_policy(value: str) -> PricingPolicyName:
+    normalized = str(value).strip().lower()
+    allowed = {"static", "rule_based", "dynamic"}
+    if normalized not in allowed:
+        raise ValueError(f"pricing_policy must be one of {sorted(allowed)}, got {value!r}")
+    return normalized  # type: ignore[return-value]
+
+
+def _parse_competitor_mode(value: str) -> str:
+    normalized = str(value).strip().lower()
+    allowed = {"none", "static", "reactive"}
+    if normalized not in allowed:
+        raise ValueError(f"competitor_mode must be one of {sorted(allowed)}, got {value!r}")
+    return normalized
+
+
 def _parse_booking_curve_type(value: str) -> BookingCurveTypeName:
     normalized = str(value).strip().lower()
     if normalized != "logistic":
@@ -139,18 +155,37 @@ def _validate_simulation_config(cfg: SimulationConfig) -> None:
         raise ValueError("business share parameters must lie strictly between 0 and 1")
     if cfg.early_business_share > cfg.late_business_share + 1e-6:
         raise ValueError("early_business_share must be <= late_business_share")
+    if cfg.low_load_factor_threshold >= cfg.high_load_factor_threshold:
+        raise ValueError("low_load_factor_threshold must be < high_load_factor_threshold")
+    if cfg.pace_gap_lower_threshold >= cfg.pace_gap_raise_threshold:
+        raise ValueError("pace_gap_lower_threshold must be < pace_gap_raise_threshold")
+    if not (0.0 <= cfg.competitor_response_strength <= 1.0):
+        raise ValueError("competitor_response_strength should be in [0, 1]")
+    if cfg.static_bucket_index is not None and (
+        cfg.static_bucket_index < 0 or cfg.static_bucket_index >= len(cfg.fare_buckets)
+    ):
+        raise ValueError("static_bucket_index out of range for fare_buckets")
 
 
 def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
     try:
-        fare_buckets = raw["fare_buckets"]
-        if not isinstance(fare_buckets, (list, tuple)) or not fare_buckets:
-            raise TypeError("fare_buckets must be a non-empty list of numbers")
-        buckets = tuple(float(x) for x in fare_buckets)
+        bucket_src = raw.get("fare_bucket_values", raw["fare_buckets"])
+        if not isinstance(bucket_src, (list, tuple)) or not bucket_src:
+            raise TypeError("fare_buckets / fare_bucket_values must be a non-empty list of numbers")
+        buckets = tuple(float(x) for x in bucket_src)
 
         booking_curve_type = _parse_booking_curve_type(str(raw["booking_curve_type"]))
 
         demand_stochastic = bool(raw.get("demand_stochastic", True))
+        pricing_policy = _parse_pricing_policy(str(raw.get("pricing_policy", "static")))
+        competitor_mode = _parse_competitor_mode(str(raw["competitor_mode"]))
+
+        static_bucket_raw = raw.get("static_bucket_index")
+        static_bucket_index: int | None
+        if static_bucket_raw is None or static_bucket_raw == "":
+            static_bucket_index = None
+        else:
+            static_bucket_index = int(static_bucket_raw)
 
         return SimulationConfig(
             booking_horizon_days=int(raw["booking_horizon_days"]),
@@ -166,7 +201,7 @@ def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
             ancillary_mean=float(raw["ancillary_mean"]),
             casm_ex=float(raw["casm_ex"]),
             fixed_flight_cost=float(raw["fixed_flight_cost"]),
-            competitor_mode=str(raw["competitor_mode"]),
+            competitor_mode=competitor_mode,
             rng_seed=int(raw["rng_seed"]),
             expected_total_demand=float(raw["expected_total_demand"]),
             demand_multiplier=float(raw["demand_multiplier"]),
@@ -184,6 +219,18 @@ def _coerce_simulation_config(raw: Mapping[str, Any]) -> SimulationConfig:
             route_origin=str(raw.get("route_origin", "UNK")),
             route_destination=str(raw.get("route_destination", "UNK")),
             demand_stochastic=demand_stochastic,
+            pricing_policy=pricing_policy,
+            early_window_days=int(raw.get("early_window_days", 45)),
+            late_window_days=int(raw.get("late_window_days", 14)),
+            low_load_factor_threshold=float(raw.get("low_load_factor_threshold", 0.35)),
+            high_load_factor_threshold=float(raw.get("high_load_factor_threshold", 0.85)),
+            pace_gap_raise_threshold=float(raw.get("pace_gap_raise_threshold", 6.0)),
+            pace_gap_lower_threshold=float(raw.get("pace_gap_lower_threshold", -6.0)),
+            competitor_base_offset=float(raw.get("competitor_base_offset", -12.0)),
+            competitor_noise_std=float(raw.get("competitor_noise_std", 4.0)),
+            competitor_match_threshold=float(raw.get("competitor_match_threshold", 12.0)),
+            competitor_response_strength=float(raw.get("competitor_response_strength", 0.3)),
+            static_bucket_index=static_bucket_index,
         )
     except KeyError as exc:  # pragma: no cover - defensive; validated earlier
         raise KeyError(f"Missing key while building SimulationConfig: {exc}") from exc

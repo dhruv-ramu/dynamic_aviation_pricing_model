@@ -1,4 +1,4 @@
-"""Single-flight simulation engine with modular stochastic demand."""
+"""Single-flight simulation engine with modular stochastic demand and policy-driven fares."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from airline_rm.entities.flight import Flight
 from airline_rm.entities.passenger_segment import PassengerSegment
 from airline_rm.entities.route import Route
 from airline_rm.entities.simulation_state import FlightSimulationResult, SimulationState
+from airline_rm.pricing.competitor_response import CompetitorPricingModel
 from airline_rm.pricing.pricing_policy_base import PricingPolicy
 from airline_rm.types import SimulationConfig
 
@@ -47,7 +48,7 @@ def run_single_flight_simulation(
     policy: PricingPolicy,
     rng: np.random.Generator,
 ) -> FlightSimulationResult:
-    """Simulate bookings day-by-day using the demand subsystem (curve, arrivals, WTP, conversion)."""
+    """Simulate bookings day-by-day using demand + competitor-aware pricing."""
 
     flight = _build_flight(config)
     state = SimulationState(flight=flight)
@@ -57,11 +58,25 @@ def run_single_flight_simulation(
     segment_mix = SegmentMixModel.from_simulation_config(config)
     wtp_model = WTPModel.from_simulation_config(config)
     converter = BookingConverter()
+    competitor = CompetitorPricingModel(config)
+
+    total_intensity = float(config.expected_total_demand * config.demand_multiplier)
 
     for day in range(1, config.booking_horizon_days + 1):
         state.day_index = day
         days_until_departure = config.booking_horizon_days - day + 1
-        fare = policy.quote_fare(days_until_departure, state)
+
+        expected_sold = min(
+            flight.capacity,
+            total_intensity * booking_curve.cumulative_share(days_until_departure),
+        )
+        state.booking_pace_gap = float(state.seats_sold - expected_sold)
+
+        comp_fare = competitor.competitor_fare(days_until_departure, state.last_quoted_fare, rng)
+        action = policy.decide(days_until_departure, state, competitor_fare=comp_fare)
+        fare = action.fare
+        state.current_bucket_index = action.bucket_index
+        state.fare_history.append((day, fare, comp_fare))
 
         day_index_zero_based = day - 1
         n_arrivals = arrivals.sample_arrivals_for_day(day_index_zero_based, rng)
@@ -99,7 +114,10 @@ def run_single_flight_simulation(
             if state.seats_sold >= state.flight.capacity and state.sellout_day is None:
                 state.sellout_day = day
 
+        state.last_quoted_fare = fare
+
     total_cost = float(config.fixed_flight_cost) + _variable_operating_cost(config, state.seats_sold)
+    fare_series = tuple(f for _, f, _ in state.fare_history)
 
     return FlightSimulationResult(
         flight=flight,
@@ -113,4 +131,5 @@ def run_single_flight_simulation(
         rejected_due_to_price=state.rejected_due_to_price,
         rejected_due_to_capacity=state.rejected_due_to_capacity,
         sellout_day=state.sellout_day,
+        fare_series=fare_series,
     )

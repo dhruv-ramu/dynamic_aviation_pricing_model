@@ -23,6 +23,10 @@ class SimulationState:
     rejected_due_to_price: int = 0
     rejected_due_to_capacity: int = 0
     sellout_day: int | None = None
+    current_bucket_index: int = 0
+    last_quoted_fare: float | None = None
+    booking_pace_gap: float = 0.0
+    fare_history: list[tuple[int, float, float | None]] = field(default_factory=list)
 
     @property
     def seats_remaining(self) -> int:
@@ -44,3 +48,4 @@ class FlightSimulationResult:
     rejected_due_to_price: int = 0
     rejected_due_to_capacity: int = 0
     sellout_day: int | None = None
+    fare_series: tuple[float, ...] = ()

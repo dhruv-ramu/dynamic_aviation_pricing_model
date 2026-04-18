@@ -6,7 +6,8 @@ Modular, source-backed **simulation engine** for short-haul U.S. domestic airlin
 
 - A typed Python package (`airline_rm`) with a clear pipeline: **config → environment entities → pricing policy → simulation → metrics**.
 - Phase 1 provides YAML-driven configuration, core datamodels, and a **minimal static fare policy**.
-- **Phase 2 demand** adds a modular stochastic demand path: **logistic booking curve** (time-varying arrival intensity), **Poisson daily arrivals**, **segment mix** (leisure-early / business-late logistic), **lognormal willingness-to-pay** (USD mean/std), and **threshold conversion** vs the quoted fare—wired through the simulation engine with transparent **KPI metrics** and a **CLI** entrypoint.
+- **Phase 2 demand** adds a modular stochastic demand path: **logistic booking curve** (time-varying arrival intensity), **Poisson daily arrivals**, **segment mix** (leisure-early / business-late logistic), **lognormal willingness-to-pay** (USD mean/std), and **threshold conversion** vs the quoted fare.
+- **Phase 3 pricing** adds a **sorted fare-bucket ladder**, **static** (fixed bucket), **rule-based** (time/load + mild competitor match), and **dynamic heuristic** (pace vs booking curve + inventory + competitor nudge) policies, plus a simple **competitor fare model** (`none` / `static` / `reactive`). The engine quotes a policy **each day** before simulating arrivals; `evaluation/policy_comparison.compare_default_policies` runs static vs rule-based vs dynamic on the same YAML.
 
 ## What this is not (yet)
 
@@ -32,6 +33,7 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 python -m airline_rm.cli.run_experiment --config configs/base_config.yaml
+python -m airline_rm.cli.run_experiment --config configs/base_config.yaml --policy rule_based
 pytest
 ```
 
