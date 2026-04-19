@@ -13,7 +13,7 @@ Modular, source-backed **simulation engine** for short-haul U.S. domestic airlin
 ## What this is not (yet)
 
 - Not a dataset project, notebook-first workflow, or RL training stack.
-- No live fare scraping, databases, Streamlit frontends, or Docker orchestration.
+- No live fare scraping, databases, or Docker orchestration.
 - No-show realization, overbooking optimization, denied boarding, competitor reaction, dynamic/rule-based pricing, or policy comparison runners are **not** implemented yet.
 
 ## Repository layout
@@ -41,6 +41,17 @@ pytest
 ### Packaging note
 
 Sources live under `src/airline_rm/` (src layout). Install with `pip install -e .` so `python -m airline_rm.cli.run_experiment` resolves cleanly without manual `PYTHONPATH` edits.
+
+## Portfolio explainer (Streamlit)
+
+The parent workspace includes `app/`, a small **Streamlit** walkthrough that reads `reports/final/`. From the parent directory (sibling of `airline_rm_project/`):
+
+```bash
+pip install -r app/requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+Details: `../app/README.md`.
 
 ## Roadmap (later phases)
 
