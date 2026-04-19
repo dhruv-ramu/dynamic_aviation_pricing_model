@@ -1,0 +1,7 @@
+base_scenario,perturbation_label,winner_baseline,winner_perturbed,winner_unchanged,mean_profit_static_base,mean_profit_rule_base,mean_profit_dynamic_base,mean_profit_static_pert,mean_profit_rule_pert,mean_profit_dynamic_pert
+strong_demand,strong_demand_etd_minus_10pct,dynamic,dynamic,True,22318.06,22012.82,23455.1,19247.62,21665.84,22091.32
+strong_demand,strong_demand_etd_plus_10pct,dynamic,dynamic,True,22318.06,22012.82,23455.1,24970.92,22091.54,25282.14
+overbook_bump_stress,bump_stress_ns_higher,dynamic,dynamic,True,24029.12,14448.239543954394,24243.896397681037,24565.8,18099.22920492049,24838.847127669276
+overbook_bump_stress,bump_stress_ns_lower,dynamic,dynamic,True,24029.12,14448.239543954394,24243.896397681037,23572.26,11625.488004800482,23681.27426066775
+very_strong_late_demand,late_dm_minus,dynamic,dynamic,True,22114.72,22790.42,23292.2,20855.08,22113.98,22364.82
+very_strong_late_demand,late_dm_plus,dynamic,static,False,22114.72,22790.42,23292.2,24836.96,22802.42,24367.28

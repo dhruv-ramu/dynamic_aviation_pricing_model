@@ -23,6 +23,7 @@ from airline_rm.evaluation.scenario_comparison import (
     scenario_winner_table,
 )
 from airline_rm.evaluation.sensitivity import sweep_parameter
+from airline_rm.evaluation.validation import run_validation_suite
 from airline_rm.pricing import build_pricing_policy
 from airline_rm.entities.simulation_state import FlightSimulationResult
 from airline_rm.simulation.engine import run_single_flight_simulation
@@ -99,6 +100,11 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Comma-separated values for --sweep-param (e.g. 0.05,0.10,0.15).",
     )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help="Run validation / robustness suite; writes CSVs under reports/validation/. Use with --n-runs and --seed.",
+    )
     return parser.parse_args()
 
 
@@ -137,6 +143,17 @@ def _print_single_run_summary(
 def main() -> None:
     args = _parse_args()
     base = load_simulation_config(args.config)
+
+    if args.validate:
+        cfg = base
+        if args.seed is not None:
+            cfg = replace(cfg, rng_seed=int(args.seed))
+        # Named scenarios are iterated inside the validation module; --scenario is ignored here.
+        paths = run_validation_suite(cfg, n_runs=max(2, int(args.n_runs)), stability_max_runs=500)
+        print("Validation outputs:")
+        for p in paths.values():
+            print(f"  {p.resolve()}")
+        return
 
     if args.compare_scenarios:
         if args.n_runs < 2:

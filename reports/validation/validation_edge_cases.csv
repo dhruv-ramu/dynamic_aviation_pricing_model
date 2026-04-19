@@ -1,0 +1,7 @@
+case_name,n_runs,error,sanity_flag,mean_profit_static,mean_profit_rule_based,mean_profit_dynamic
+near_zero_demand,40,,,-6303.125,-6130.675,-6062.85
+extreme_high_demand,40,,,28727.425,22036.1,28751.05
+zero_no_show,40,,,13682.2,16518.402747252745,15783.325
+very_high_no_show,40,,,16030.525,19846.325,19034.125
+no_competitor,40,,,15008.15,15094.525,16401.6
+hyper_reactive_competitor,40,,,14401.975,16435.625,16119.475

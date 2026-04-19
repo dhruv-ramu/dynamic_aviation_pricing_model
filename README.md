@@ -42,6 +42,16 @@ pytest
 
 Sources live under `src/airline_rm/` (src layout). Install with `pip install -e .` so `python -m airline_rm.cli.run_experiment` resolves cleanly without manual `PYTHONPATH` edits.
 
+### Validation / robustness (Monte Carlo)
+
+From `airline_rm_project/`:
+
+```bash
+PYTHONPATH=src python -m airline_rm.cli.run_experiment --config configs/base_config.yaml --validate --n-runs 100 --seed 2026
+```
+
+Writes CSVs and `validation_summary.md` under `reports/validation/`.
+
 ## Portfolio explainer (Streamlit)
 
 The parent workspace includes `app/`, a small **Streamlit** walkthrough that reads `reports/final/`. From the parent directory (sibling of `airline_rm_project/`):
