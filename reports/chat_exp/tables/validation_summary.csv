@@ -1,0 +1,12 @@
+scenario,winner_stability,seed_sensitivity,statistically_significant_dynamic_vs_rule,notes
+baseline,high,stable,no,
+weak_demand,high,stable,no,
+strong_demand,high,stable,yes,
+very_strong_late_demand,high,stable,no,
+high_no_show,high,stable,no,
+low_no_show,high,stable,no,
+business_heavy,high,some_variation,no,one alternate-seed winner change
+leisure_heavy,high,stable,no,
+higher_overbooking,high,stable,no,
+overbook_bump_stress,medium,some_variation,yes,one alternate-seed winner change
+strong_competitor_pressure,high,stable,no,

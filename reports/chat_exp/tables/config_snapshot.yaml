@@ -1,0 +1,9 @@
+capacity: 180
+expected_total_demand: 210.0
+demand_multiplier: 1.0
+no_show_mean: 0.1
+overbooking_limit_pct: 0.03
+leisure_wtp_mean: 208.0
+business_wtp_mean: 315.0
+booking_curve_midpoint: 18.0
+booking_curve_steepness: 0.45
