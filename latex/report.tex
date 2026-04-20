@@ -1,0 +1,284 @@
+% Airline Revenue Management Simulator Report
+% Figures: ../airline_rm_project/reports/chat_exp/figures/
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage[hidelinks]{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+\graphicspath{{../airline_rm_project/reports/chat_exp/figures/}}
+
+\title{Airline Revenue Management Simulator Report}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report summarizes a single-flight Monte Carlo simulator that compares static, rule-based, and dynamic pricing policies under stylized short-haul U.S.\ domestic conditions. Headline experiments use $n=100$ Monte Carlo runs with seed $2026$. The main finding is \textbf{regime dependence}: no single policy wins in every scenario; rule-based pricing tends to lead in stable environments, while dynamic pricing adds value under strong or late demand and under operational bump-risk stress.
+\end{abstract}
+
+\section*{Executive summary}
+
+Airline revenue management is the problem of deciding \textbf{how to price a fixed number of seats over time when demand is uncertain}. Seats are perishable: once a flight departs, any empty seat has zero value. At the same time, selling too cheaply too early can leave money on the table, while overselling can create costly denied boardings. This project was built to answer a practical question: \textbf{which pricing policy works best under different demand and operational conditions on a short-haul U.S.\ flight?}
+
+The simulator compares three pricing approaches. The \textbf{static} policy keeps one fare bucket throughout the booking horizon. The \textbf{rule-based} policy adjusts fares using transparent time and load thresholds plus mild competitor response. The \textbf{dynamic} policy adapts using booking pace, seat scarcity, and expected remaining demand. The model runs as a single-flight Monte Carlo simulator with stochastic arrivals, business versus leisure mix, fare buckets, no-shows at departure, and optional overbooking with denied-boarding costs. All headline comparisons in this report use ($n=100$) runs with seed $2026$.
+
+The main finding is that \textbf{no single policy wins everywhere}. In stable or weak-demand conditions, the \textbf{rule-based} policy usually produces the highest mean profit. In stronger-demand environments, especially when valuable demand arrives late, the \textbf{dynamic} policy becomes best. In the most operationally stressful environment, \texttt{overbook\_bump\_stress}, the dynamic policy also outperforms because it manages bump risk much better than the rule-based policy, which becomes too aggressive and suffers very large denied-boarding losses. Static pricing is never the overall winner in the main scenario set except that it remains comparatively resilient in extreme bump-sensitive conditions because it is conservative.
+
+\section{Purpose of the project}
+
+This project is not just about changing ticket prices. Its purpose is to study a deeper business problem:
+\[
+\text{How should an airline trade off price, occupancy, and operational risk over time?}
+\]
+That question matters because airlines are managing three conflicting goals at once:
+\begin{enumerate}
+  \item \textbf{Fill seats} so the aircraft does not leave half empty.
+  \item \textbf{Protect yield} so high-value late demand is not crowded out by cheap early sales.
+  \item \textbf{Control disruption risk} so overbooking does not turn into denied boarding and compensation costs.
+\end{enumerate}
+
+The report therefore focuses on two linked questions:
+\[
+\textbf{Q1: Which pricing policy makes the most money under normal conditions?}
+\]
+\[
+\textbf{Q2: When do more adaptive policies become better than simpler rules?}
+\]
+Those are the real questions the simulator is designed to answer.
+
+\section{What the model is trying to represent}
+
+At a high level, the simulator represents one short-haul U.S.\ domestic flight. Customers arrive over a booking horizon of discrete sales days. Some are more price-sensitive leisure travelers; others are less price-sensitive business travelers. The airline quotes fares using fare buckets. Passengers may book or not book depending on timing and willingness to pay. Before departure, some booked passengers do not show up. If the airline has accepted too many bookings relative to physical seats, some passengers may need to be denied boarding, creating direct compensation and goodwill costs.
+
+The baseline configuration used for the report has:
+\begin{itemize}
+  \item capacity $= 180$ seats,
+  \item expected total demand $= 210$,
+  \item demand multiplier $= 1.0$,
+  \item no-show mean $= 0.10$,
+  \item overbooking limit $= 3\%$,
+  \item leisure willingness-to-pay mean $= 208$,
+  \item business willingness-to-pay mean $= 315$,
+  \item booking-curve midpoint $= 18$,
+  \item booking-curve steepness $= 0.45$.
+\end{itemize}
+
+These choices are intended to approximate a short-haul domestic market rather than reproduce any one airline's proprietary data. The original calibration logic was grounded in public parameter ranges for booking curves, fare ranges, elasticities, load factors, no-shows, and overbooking behavior. In other words, the simulator is \textbf{stylized but informed}, not arbitrary.
+
+\section{Policies compared}
+
+\subsection{Static pricing}
+
+The static policy is the simplest benchmark. It keeps one fare level throughout the booking horizon. It is easy to understand and operationally simple, but it cannot react to changing demand or changing scarcity. In practice, it behaves like a rigid baseline against which better policies should be judged.
+
+\subsection{Rule-based pricing}
+
+The rule-based policy uses clear heuristics: time to departure, load thresholds, and mild competitor adjustment. It is interpretable and stable. Conceptually, it asks: \emph{Are we early or late? Are we filling too fast or too slowly?} If so, it moves to a different fare bucket. This resembles many real operational systems that rely on robust business rules rather than highly adaptive control.
+
+\subsection{Dynamic pricing}
+
+The dynamic policy tries to be more forward-looking. It uses booking pace, seat scarcity, and expected remaining demand to adapt fares as the booking process unfolds. The idea is not just to sell seats, but to protect future value when the remaining capacity looks more precious. This policy is the most adaptive, and the report tests whether that extra complexity actually pays off.
+
+\section{Methodology}
+
+The simulator is a \textbf{single-flight Monte Carlo model}. Each run simulates one booking horizon from first sale day to departure. For each scenario and policy, the report uses 100 runs and averages the resulting metrics. Policies use separate random-number blocks derived from the same seed structure, and the fare-path figures shown in the supporting materials use representative runs chosen as those closest to each policy's mean profit.
+
+The core scenarios are designed to answer ``when does each policy win?'' They include baseline demand, weak demand, strong demand, very strong late demand, high and low no-show conditions, business-heavy and leisure-heavy mixes, stronger competitor pressure, higher overbooking, and a dedicated \texttt{overbook\_bump\_stress} scenario intended to make denied boardings economically meaningful. The scenario set is therefore not random; it is built to separate \textbf{stable environments}, \textbf{scarcity-heavy environments}, and \textbf{operational-risk-heavy environments}.
+
+\section{Main results}
+
+\subsection{The central pattern: no policy wins everywhere}
+
+The simulator's strongest result is that \textbf{policy performance is regime-dependent}. In the baseline scenario, mean profits are approximately:
+\begin{itemize}
+  \item static: \$14{,}403,
+  \item rule-based: \$17{,}698,
+  \item dynamic: \$16{,}769.
+\end{itemize}
+That immediately shows two things. First, static pricing underperforms badly; keeping one fixed fare is simply too rigid. Second, the rule-based policy outperforms the dynamic policy in the baseline environment. That is important because it means added sophistication is not automatically valuable.
+
+The same pattern holds in several other calmer environments. Rule-based is the mean-profit winner in:
+\begin{itemize}
+  \item \texttt{weak\_demand},
+  \item \texttt{high\_no\_show},
+  \item \texttt{low\_no\_show},
+  \item \texttt{business\_heavy},
+  \item \texttt{leisure\_heavy},
+  \item \texttt{higher\_overbooking},
+  \item \texttt{strong\_competitor\_pressure}.
+\end{itemize}
+
+This makes intuitive sense. In stable or moderately varying environments, a transparent rule set appears to be enough. The extra responsiveness of the dynamic policy does not create enough added value to beat a simpler heuristic.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{mean_profit_by_scenario.png}
+  \caption{Mean profit by scenario and policy ($n=100$, seed 2026). Regime dependence is visible: rule-based leads in many ``calm'' presets; dynamic leads where demand or late-booking effects dominate; \texttt{overbook\_bump\_stress} separates policies sharply.}
+  \label{fig:meanprofit}
+\end{figure}
+
+\subsection{When dynamic pricing becomes superior}
+
+The dynamic policy wins in the scenarios where adaptation should matter most.
+
+In \texttt{strong\_demand}, mean profits are:
+\begin{itemize}
+  \item static: \$22{,}212,
+  \item rule-based: \$22{,}046,
+  \item dynamic: \$23{,}393.
+\end{itemize}
+
+In \texttt{very\_strong\_late\_demand}, mean profits are:
+\begin{itemize}
+  \item static: \$22{,}254,
+  \item rule-based: \$22{,}604,
+  \item dynamic: \$23{,}213.
+\end{itemize}
+
+These are exactly the environments where seat protection and late demand capture should matter. If demand is strong overall, or if a large share of valuable demand arrives late, the airline benefits from holding back and raising fares more intelligently. That is what the dynamic policy is designed to do, and here it works.
+
+The fare-path figures reinforce this interpretation. In both \texttt{strong\_demand} and \texttt{very\_strong\_late\_demand}, the dynamic policy quotes materially higher prices late in the booking horizon than the rule-based policy. In plain English, it behaves more like a policy that says:
+\begin{quote}
+``Seats are getting scarce, and future customers are still likely to be valuable, so I should stop selling too cheaply.''
+\end{quote}
+That is exactly what a good airline RM system is supposed to do.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fare_path_rule_vs_dynamic__strong_demand.png}
+  \caption{Representative fare paths: rule-based vs.\ dynamic in \texttt{strong\_demand} (run index chosen near each policy's mean profit).}
+  \label{fig:farestrong}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fare_path_rule_vs_dynamic__very_strong_late_demand.png}
+  \caption{Representative fare paths in \texttt{very\_strong\_late\_demand}.}
+  \label{fig:farelate}
+\end{figure}
+
+\subsection{The strongest finding: bump-risk stress}
+
+The most revealing scenario is \texttt{overbook\_bump\_stress}. Here the model intentionally raises demand, lowers no-shows, and expands overbooking risk enough that denied boarding becomes economically meaningful. In that setting, mean profits are:
+\begin{itemize}
+  \item static: \$23{,}857,
+  \item rule-based: \$14{,}277,
+  \item dynamic: \$24{,}116.
+\end{itemize}
+
+This is the single clearest result in the project.
+
+The rule-based policy collapses under this stress scenario. In an 80-run subset used for diagnostics, it produced approximately:
+\begin{itemize}
+  \item mean boarded load factor $= 1.000$,
+  \item mean accepted booking load factor $= 1.1209$,
+  \item mean denied boardings $= 12.125$,
+  \item bump risk $= 1.000$.
+\end{itemize}
+
+That means the rule-based policy is too aggressive when overbooking becomes dangerous. It keeps selling into the booking limit but does not manage downside risk well enough.
+
+The dynamic policy, by contrast, maintains approximately:
+\begin{itemize}
+  \item mean boarded load factor $= 0.8846$,
+  \item mean accepted booking load factor $= 0.9283$,
+  \item mean denied boardings $= 0.3625$,
+  \item bump risk $= 0.0875$.
+\end{itemize}
+
+That is a dramatic reduction in operational damage. Static also looks comparatively strong here because it is conservative and implicitly avoids excess exposure, but dynamic still edges it out on profit while taking only modest bump risk.
+
+So the conclusion is not simply ``dynamic makes more money.'' It is more interesting:
+\[
+\text{Dynamic pricing can create value by controlling operational risk, not just by changing fares.}
+\]
+That is what elevates this project beyond a basic pricing simulation.
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fare_path_rule_vs_dynamic__overbook_bump_stress.png}
+  \caption{Fare paths under \texttt{overbook\_bump\_stress}: dynamic stays more defensive than rule-based.}
+  \label{fig:farebump}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=0.72\textwidth]{bump_risk__overbook_bump_stress.png}
+  \caption{Bump risk (share of runs with at least one denied boarding) in \texttt{overbook\_bump\_stress} by policy.}
+  \label{fig:bumprisk}
+\end{figure}
+
+\section{What the project is actually answering}
+
+A reader with no airline background should take away this answer:
+
+\paragraph{Question.} \textbf{Should an airline use one fixed price, a set of simple business rules, or a more adaptive policy?}
+
+\paragraph{Answer.}
+\begin{itemize}
+  \item If the environment is fairly stable, \textbf{simple rule-based pricing may be best}.
+  \item If demand is strong, arrives late, or creates meaningful bump risk, \textbf{adaptive pricing becomes more valuable}.
+  \item A fixed-price policy is usually too blunt and underperforms.
+  \item Overbooking cannot be thought of separately from pricing: the best pricing policy can change once denied boardings become costly.
+\end{itemize}
+
+That is the core contribution of the report.
+
+\section{Reading the policies in plain English}
+
+\paragraph{Static: simple but too rigid.} Static pricing is easy to run, but it leaves too much money on the table in almost every nontrivial scenario. It neither fills efficiently in weak conditions nor protects seats intelligently in strong ones. Its only hidden advantage is that it is conservative enough to avoid some operational disasters.
+
+\paragraph{Rule-based: best default operator.} Rule-based pricing is the most reliable all-around performer in the baseline regime. It does well in calm environments because it captures the major structure of the problem without overreacting to noise. For a practical operator who wants transparent rules and stable behavior, this policy would be attractive.
+
+\paragraph{Dynamic: best when the environment is truly dynamic.} Dynamic pricing earns its complexity only in the scenarios where flexibility matters---strong demand, late demand, and bump-sensitive stress. In those cases, it protects capacity better and manages tradeoffs better than rules alone.
+
+This is a realistic and nuanced conclusion. It would actually be suspicious if dynamic won every single environment.
+
+\section{Why the figures matter}
+
+The mean-profit-by-scenario chart (Figure~\ref{fig:meanprofit}) is valuable because it makes the regime dependence visible immediately. It shows three distinct zones:
+\begin{enumerate}
+  \item \textbf{Stable zone:} rule-based leads.
+  \item \textbf{Scarcity zone:} dynamic leads.
+  \item \textbf{Stress zone:} dynamic or static can beat rule-based because risk control starts to dominate.
+\end{enumerate}
+
+The fare-path charts (Figures~\ref{fig:farestrong}--\ref{fig:farebump}) matter because they explain \emph{why} those results happen. In the high-demand scenarios, the dynamic path sits above the rule-based path late in the horizon, which shows it is preserving higher-value seats instead of continuing to sell too cheaply. In the bump-stress chart, the dynamic path is also clearly more defensive than the rule-based one, which is consistent with lower bump exposure.
+
+The bump-risk chart for \texttt{overbook\_bump\_stress} (Figure~\ref{fig:bumprisk}) is especially important for non-experts because it turns a technical concept into an intuitive one:
+\begin{itemize}
+  \item if bump risk is low, the policy is operationally disciplined;
+  \item if bump risk is high, the policy is exposing the airline to disruption and compensation.
+\end{itemize}
+
+\section{Limitations}
+
+This project has meaningful limitations and they should be stated plainly.
+
+First, the calibration is \textbf{synthetic}. The route parameters are illustrative rather than estimated from proprietary airline reservation data. Second, the model does not use real PNR, yield, or fare-class data, so its outputs should be understood as \textbf{structured experiments}, not direct operational forecasts. Third, winners can move when assumptions about demand, no-shows, or overbooking change. Fourth, conclusions are scenario-dependent by design. Fifth, the model is a single-leg simulator and does not include network effects such as connections, fleet assignment, or knock-on disruption across multiple flights.
+
+Those are real limitations, but they do not invalidate the project. They simply define what kind of claim is legitimate. The correct claim is:
+\begin{quote}
+This simulator identifies plausible policy tradeoffs under stylized but evidence-informed airline conditions.
+\end{quote}
+That is strong enough.
+
+\section{Conclusion}
+
+This project set out to answer a simple but important question:
+\[
+\text{How should an airline price seats over time when both demand and operations are uncertain?}
+\]
+
+The answer from this simulator is clear: \textbf{there is no universally optimal pricing policy}.
+
+A fixed fare is usually too crude. A transparent rule-based policy is often best in normal, stable environments. But when demand becomes stronger, arrives later, or interacts with overbooking risk, a more adaptive dynamic policy becomes superior. The most compelling evidence comes from the overbook-bump-stress environment, where the dynamic policy earns its advantage not only through pricing but through materially better control of denied-boarding exposure.
+
+\end{document}
